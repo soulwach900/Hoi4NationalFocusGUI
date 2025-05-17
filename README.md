@@ -1,6 +1,6 @@
 # Hoi4NationalFocusGUI
 
-![image](img\img1.png)
+![image](img/img1.png)
 
 ## Description
 
