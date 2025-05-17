@@ -27,12 +27,17 @@ namespace h4nationalfocusgui
         private Rectangle iconField = new(20, 350, 280, 30);
         private Rectangle saveButton = new(20, 400, 100, 30);
         private Rectangle saveYamlButton = new(140, 400, 150, 30);
+        private Rectangle focusShowField;
 
         private string statusMessage = "";
         private float statusTimer = 0;
 
         private Dictionary<string, Texture2D> loadedIcons = new();
 
+        private Focus? pendingDeleteFocus = null;
+        private bool isDeleteConfirming = false;
+        private Rectangle pendingRect = new();
+        
         public void Update()
         {
             Vector2 mouse = GetMousePosition();
@@ -98,6 +103,7 @@ namespace h4nationalfocusgui
                         else
                             selectedPrerequisites.Add(focus.Id);
                     }
+
                     y += 30;
                 }
             }
@@ -179,19 +185,83 @@ namespace h4nationalfocusgui
                     }
                 }
             }
-
-            foreach (var focus in focuses)
+            
+            Vector2 mouse = Raylib.GetMousePosition();
+            
+            for (int i = focuses.Count - 1; i >= 0; i--)
             {
+                var focus = focuses[i];
                 int fx = xStart + focus.X * 80;
                 int fy = yStart + focus.Y * 80;
 
-                DrawRectangle(fx, fy, 64, 64, Color.SkyBlue);
+                Rectangle rect = new Rectangle(fx, fy, 64, 64);
+
+                Raylib.DrawRectangleRec(rect, Color.SkyBlue);
 
                 if (!string.IsNullOrWhiteSpace(focus.Icon) && loadedIcons.ContainsKey(focus.Icon))
-                    DrawTexture(loadedIcons[focus.Icon], fx, fy, Color.White);
+                {
+                    Raylib.DrawTexture(loadedIcons[focus.Icon], fx, fy, Color.White);
+                }
 
-                DrawRectangleLines(fx, fy, 64, 64, Color.Black);
-                DrawText(focus.Id, fx + 5, fy + 48, 12, Color.Black);
+                bool hovered = Raylib.CheckCollisionPointRec(mouse, rect);
+
+                if (hovered)
+                {
+                    Raylib.DrawRectangleLinesEx(rect, 3, Color.Red);
+                    
+                    if (Raylib.IsMouseButtonPressed(MouseButton.Left) && pendingDeleteFocus == null)
+                    {
+                        pendingDeleteFocus = focus;
+                        pendingRect = rect;
+                        isDeleteConfirming = true;
+                    }
+                }
+
+                Raylib.DrawRectangleLines(fx, fy, 64, 64, Color.Black);
+                Raylib.DrawText(focus.Id, fx + 5, fy + 48, 12, Color.Black);
+            }
+            
+            if (pendingDeleteFocus != null && isDeleteConfirming)   
+            {
+                int screenWidth = Raylib.GetScreenWidth();
+                int screenHeight = Raylib.GetScreenHeight();
+
+                int boxWidth = (int)(screenWidth * 0.9f);
+                int boxHeight = (int)(screenHeight * 0.9f);
+
+                int boxX = (screenWidth - boxWidth) / 2;
+                int boxY = (screenHeight - boxHeight) / 2;
+
+                Rectangle confirmBox = new Rectangle(boxX, boxY, boxWidth, boxHeight);
+
+                Raylib.DrawRectangleRec(confirmBox, Color.LightGray);
+                Raylib.DrawRectangleLinesEx(confirmBox, 2, Color.DarkGray);
+
+                Raylib.DrawText("Delete focus?", boxX + 20, boxY + 15, 16, Color.Black);
+                
+                Rectangle yesBtn = new Rectangle(boxX + 20, boxY + 50, 70, 30);
+                Rectangle noBtn = new Rectangle(boxX + 110, boxY + 50, 70, 30);
+
+                Raylib.DrawRectangleRec(yesBtn, Color.Green);
+                Raylib.DrawText("Yes", (int)yesBtn.X + 15, (int)yesBtn.Y + 8, 16, Color.Black);
+
+                Raylib.DrawRectangleRec(noBtn, Color.Red);
+                Raylib.DrawText("No", (int)noBtn.X + 15, (int)noBtn.Y + 8, 16, Color.Black);
+                
+                if (Raylib.IsMouseButtonReleased(MouseButton.Left))
+                {
+                    if (Raylib.CheckCollisionPointRec(mouse, yesBtn))
+                    {
+                        focuses.Remove(pendingDeleteFocus);
+                        pendingDeleteFocus = null;
+                        isDeleteConfirming = false;
+                    }
+                    else if (Raylib.CheckCollisionPointRec(mouse, noBtn))
+                    {
+                        pendingDeleteFocus = null;
+                        isDeleteConfirming = false;
+                    }
+                }
             }
         }
 
