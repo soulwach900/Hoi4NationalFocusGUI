@@ -1,5 +1,6 @@
 using System.Numerics;
 using H4NationalFocusGUI.components;
+using H4NationalFocusGUI.enums;
 using Raylib_cs;
 using static Raylib_cs.Raylib;
 
@@ -7,32 +8,35 @@ namespace H4NationalFocusGUI.services
 {
     public class FocusRendererService
     {
-        public void DrawTextBox(ref string inputText, ref bool typing, Raylib_cs.Rectangle box, int maxLength = 20)
+        public void DrawTextBox(ref string input, ref ActiveTextField activeField, Raylib_cs.Rectangle fieldRect, ActiveTextField thisField)
         {
-            Vector2 mouse = GetMousePosition();
-            if (IsMouseButtonPressed(MouseButton.Left))
+            bool isActive = activeField == thisField;
+
+            if (CheckCollisionPointRec(GetMousePosition(), fieldRect) && IsMouseButtonPressed(MouseButton.Left))
             {
-                typing = CheckCollisionPointRec(mouse, box);
+                activeField = thisField;
             }
-            if (typing)
+
+            if (isActive)
             {
                 int key = GetCharPressed();
                 while (key > 0)
                 {
-                    if (key >= 32 && key <= 125 && inputText.Length < maxLength)
+                    if (key >= 32 && key <= 125)
                     {
-                        inputText += (char)key;
+                        input += (char)key;
                     }
                     key = GetCharPressed();
                 }
-                if (IsKeyPressed(KeyboardKey.Backspace) && inputText.Length > 0)
+
+                if (IsKeyPressed(KeyboardKey.Backspace) && input.Length > 0)
                 {
-                    inputText = inputText.Substring(0, inputText.Length - 1);
+                    input = input[..^1];
                 }
             }
-            DrawRectangleRec(box, typing ? Raylib_cs.Color.LightGray : Raylib_cs.Color.Gray);
-            DrawRectangleLinesEx(box, 1, Raylib_cs.Color.Black);
-            DrawText(inputText, (int)box.X + 5, (int)box.Y + 5, 20, Raylib_cs.Color.Black);
+
+            DrawRectangleRec(fieldRect, isActive ? Raylib_cs.Color.LightGray : Raylib_cs.Color.Gray);
+            DrawText(input, (int)fieldRect.X + 5, (int)fieldRect.Y + 5, 20, Raylib_cs.Color.Black);
         }
 
         public void DrawField(Raylib_cs.Rectangle field, bool active, string text)
@@ -74,11 +78,15 @@ namespace H4NationalFocusGUI.services
                 {
                     try
                     {
-                        if (!loadedIcons.ContainsKey(selectedPath))
+                        string finalIconPath = $"mod/gfx/interface/goals/{Path.GetFileNameWithoutExtension(selectedPath).ToLower()}.dds";
+
+                        if (!loadedIcons.ContainsKey(finalIconPath))
                         {
                             Texture2D tex = LoadTexture(selectedPath);
-                            loadedIcons[selectedPath] = tex;
+                            loadedIcons[finalIconPath] = tex;
                         }
+
+                        iconInput = finalIconPath;
 
                         iconInput = selectedPath;
                         statusMessage = "Icon loaded successfully!";

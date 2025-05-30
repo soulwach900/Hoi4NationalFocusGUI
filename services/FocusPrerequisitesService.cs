@@ -9,19 +9,20 @@ namespace H4NationalFocusGUI.services
     {
         public List<string> selectedPrerequisites = new();
 
-        public void RenderPrerequisites(List<Focus> focuses, Vector2 mouse)
+        public void RenderPrerequisites(List<Focus> focuses, Vector2 mouse, Vector2 startPos)
         {
-            DrawText("Prerequisites:", 20, 440, 18, Raylib_cs.Color.White);
-            int y = 460;
+            DrawText("Prerequisites:", (int)startPos.X, (int)startPos.Y, 18, Raylib_cs.Color.White);
+
+            int y = (int)startPos.Y + 25;
 
             foreach (var focus in focuses)
             {
-                Rectangle box = new Rectangle(20, y, 20, 20);
+                Rectangle box = new Rectangle(startPos.X, y, 20, 20);
                 bool selected = selectedPrerequisites.Contains(focus.Id);
 
                 DrawRectangleRec(box, selected ? Raylib_cs.Color.Green : Raylib_cs.Color.White);
                 DrawRectangleLinesEx(box, 1, Raylib_cs.Color.Black);
-                DrawText(focus.Id, 50, y, 16, Raylib_cs.Color.Black);
+                DrawText(focus.Id, (int)startPos.X + 30, y, 16, Raylib_cs.Color.Black);
 
                 if (IsMouseButtonPressed(Raylib_cs.MouseButton.Left) && CheckCollisionPointRec(mouse, box))
                 {
