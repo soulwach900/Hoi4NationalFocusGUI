@@ -13,6 +13,8 @@ namespace H4NationalFocusGUI.services
             if (string.IsNullOrWhiteSpace(id))
                 return (false, "Focus ID is required.");
 
+            id = id.Replace(" ", "_").ToLower();
+
             if (!int.TryParse(x, out int xVal) ||
                 !int.TryParse(y, out int yVal) ||
                 !int.TryParse(cost, out int costVal))
@@ -34,8 +36,7 @@ namespace H4NationalFocusGUI.services
 
             try
             {
-                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                string fullPath = Path.Combine(desktopPath, $"focus_{focuses[0].Id}_tree.txt");
+                string fullPath = Path.Combine("mod/common/national_focus", $"focus_{focuses[0].Id}_tree.txt");
                 focuses[0].GenerateFocusTreeFile(focuses, fullPath);
                 return (true, "File saved to desktop.");
             }

@@ -7,11 +7,14 @@ namespace h4nationalfocusgui
     internal class Program
     {
         private static Gui gui = new Gui();
+        private static FolderStructury structury = new FolderStructury();
 
         public static void Main(string[] args)
         {
             InitWindow(1280, 720, "H4NationalFocusGUI");
             SetTargetFPS(60);
+
+            structury.CreateStructury();
 
             while (!WindowShouldClose())
             {

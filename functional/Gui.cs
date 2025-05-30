@@ -10,13 +10,14 @@ namespace H4NationalFocusGUI.functional
     public class Gui
     {
         private List<Focus> focuses = new();
-
         private string idInput, iconInput, nameInput, descInput;
         private string costInput, xInput, yInput;
-        private bool typingId, typingName, typingDesc;
+        private bool typingId, typingName, typingDesc, typingCountry;
         private bool typingCost, typingX, typingY;
+        private string countryNameInput;
         private string statusMessage;
         private float statusTimer;
+        private Rectangle countryNameField;
         private Rectangle idField;
         private Rectangle nameField;
         private Rectangle descField;
@@ -31,12 +32,16 @@ namespace H4NationalFocusGUI.functional
         private Rectangle pendingRect = new();
         private FocusPrerequisitesService focusPrerequisites;
         private FocusRendererService focusRenderer;
+        private LocalisationService localisation;
+        private GoalsService goalsService;
+        private TexconvWrapper texconvWrapper = new TexconvWrapper();
 
 
         public Gui(List<Focus>? existingFocuses = null)
         {
             focuses = existingFocuses ?? new List<Focus>();
 
+            countryNameInput = "";
             idInput = "";
             iconInput = "";
             nameInput = "";
@@ -48,6 +53,7 @@ namespace H4NationalFocusGUI.functional
             statusMessage = "";
             statusTimer = 2.5f;
 
+            typingCountry = false;
             typingId = false;
             typingName = false;
             typingDesc = false;
@@ -55,6 +61,7 @@ namespace H4NationalFocusGUI.functional
             typingX = false;
             typingY = false;
 
+            countryNameField = new Rectangle(20, 10, 280, 30);
             idField = new Rectangle(20, 50, 280, 30);
             nameField = new Rectangle(20, 100, 280, 30);
             descField = new Rectangle(20, 150, 280, 30);
@@ -69,13 +76,18 @@ namespace H4NationalFocusGUI.functional
 
             focusPrerequisites = new FocusPrerequisitesService();
             focusRenderer = new FocusRendererService();
+            localisation = new LocalisationService();
+            goalsService = new GoalsService();
+            texconvWrapper = new TexconvWrapper();
         }
 
         public void Update()
         {
             Vector2 mouse = GetMousePosition();
 
-            if (CheckCollisionPointRec(mouse, idField))
+            if (CheckCollisionPointRec(mouse, countryNameField))
+                typingCountry = true;
+            else if (CheckCollisionPointRec(mouse, idField))
                 typingId = true;
             else if (CheckCollisionPointRec(mouse, nameField))
                 typingName = true;
@@ -89,7 +101,7 @@ namespace H4NationalFocusGUI.functional
                 typingY = true;
             else
             {
-                typingId = typingName = typingDesc = typingCost = typingX = typingY = false;
+                typingCountry = typingId = typingName = typingDesc = typingCost = typingX = typingY = false;
             }
 
             CaptureTextInput();
@@ -98,6 +110,7 @@ namespace H4NationalFocusGUI.functional
         private void CaptureTextInput()
         {
             // CAPTURE INPUT
+            if (typingCountry) focusRenderer.DrawTextBox(ref countryNameInput, ref typingCountry, countryNameField);
             if (typingId) focusRenderer.DrawTextBox(ref idInput, ref typingId, idField);
             if (typingName) focusRenderer.DrawTextBox(ref nameInput, ref typingName, nameField);
             if (typingDesc) focusRenderer.DrawTextBox(ref descInput, ref typingDesc, descField);
@@ -113,9 +126,9 @@ namespace H4NationalFocusGUI.functional
             FocusSaveService focusSave = new FocusSaveService();
 
             DrawRectangle(0, 0, 320, 720, Raylib_cs.Color.DarkGray);
-            DrawText("Focus Creator", 20, 10, 21, Raylib_cs.Color.Blue);
 
             // RENDER FIELDS
+            focusRenderer.DrawField(countryNameField, typingCountry, $"Country: {countryNameInput}");
             focusRenderer.DrawField(idField, typingId, $"ID: {idInput}");
             focusRenderer.DrawField(nameField, typingName, $"Name: {nameInput}");
             focusRenderer.DrawField(descField, typingDesc, $"Desc: {descInput}");
@@ -125,19 +138,42 @@ namespace H4NationalFocusGUI.functional
             focusRenderer.DrawField(iconField, false, $"Icon: {Path.GetFileName(iconInput)}");
 
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(GetMousePosition(), iconField))
+            {
                 focusRenderer.WindowsExplorerOpen(mouse, iconField, ref iconInput, loadedIcons, ref statusMessage, ref statusTimer);
+                TexconvWrapper.ConvertPngToDds("thirdparty/texconv/texconv.exe", iconInput, "mod/gfx/interface/goals", idInput.Replace(" ", "_").ToLower());
+            }
 
             DrawRectangleRec(saveButton, Raylib_cs.Color.Green);
             DrawText("Save", 30, 405, 20, Raylib_cs.Color.Black);
 
-            if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(GetMousePosition(), saveButton))
-                focusSave.TryAddFocus(idInput, nameInput, descInput, xInput, yInput, costInput, iconInput, focusPrerequisites.selectedPrerequisites, focuses);
+            if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, saveButton))
+            {
+                string id = idInput.Replace(" ", "_").ToLower();
+
+                iconInput = $"mod/gfx/interface/goals/{id}.dds";
+                string iconName = Path.GetFileNameWithoutExtension(iconInput);
+                string iconReference = $"GFX_goal_{iconName}";
+
+                focusSave.TryAddFocus(id, nameInput, descInput, xInput, yInput, costInput, iconReference, focusPrerequisites.selectedPrerequisites, focuses);
+
+                statusMessage = "Focus saved";
+                statusTimer = 2.5f;
+            }
+
+
 
             DrawRectangleRec(saveYamlButton, Raylib_cs.Color.DarkGreen);
             DrawText("Save Yaml", 145, 405, 20, Raylib_cs.Color.Black);
 
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(GetMousePosition(), saveYamlButton))
+            {
                 focusSave.SaveFocusYaml(focuses);
+                localisation.CreateLocalisation(focuses, countryNameInput);
+                goalsService.CreateGoalsGfx(focuses, countryNameInput);
+
+                statusMessage = "Yaml saved";
+            }
+
 
             // PREREQUISITES
             focusPrerequisites.RenderPrerequisites(focuses, mouse);

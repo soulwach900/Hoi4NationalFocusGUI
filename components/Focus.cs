@@ -45,7 +45,9 @@
                     {
                         writer.WriteLine("\t\tprerequisite = {");
                         foreach (var prereq in focus.Prerequisites)
-                            writer.WriteLine($"\t\t\t{{ focus = {prereq.Trim()} }}");
+                        {
+                            writer.WriteLine($"\t\t\tfocus = {prereq.Trim()}");
+                        }
                         writer.WriteLine("\t\t}");
                     }
 

@@ -7,8 +7,6 @@ namespace H4NationalFocusGUI.services
 {
     public class FocusRendererService
     {
-        private string? pendingIconPath = null;
-
         public void DrawTextBox(ref string inputText, ref bool typing, Raylib_cs.Rectangle box, int maxLength = 20)
         {
             Vector2 mouse = GetMousePosition();
@@ -58,7 +56,7 @@ namespace H4NationalFocusGUI.services
                 {
                     OpenFileDialog ofd = new()
                     {
-                        Filter = "Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.gif;*.psd;*.hdr)|*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.gif;*.psd;*.hdr",
+                        Filter = "Image Files (*.png;)|*.png;",
                         Title = "Choose a focus icon"
                     };
 
