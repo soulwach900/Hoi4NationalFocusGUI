@@ -1,319 +1,170 @@
-﻿using System.Numerics;
-using Raylib_cs;
+﻿using Rectangle = Raylib_cs.Rectangle;
+using H4NationalFocusGUI.components;
 using static Raylib_cs.Raylib;
-using Color = Raylib_cs.Color;
-using Rectangle = Raylib_cs.Rectangle;
+using H4NationalFocusGUI.services;
+using System.Numerics;
+using Raylib_cs;
 
-namespace h4nationalfocusgui
+namespace H4NationalFocusGUI.functional
 {
     public class Gui
     {
         private List<Focus> focuses = new();
 
-        private string idInput = "", iconInput = "", nameInput = "", descInput = "";
-        private string costInput = "10", xInput = "0", yInput = "0";
-
-        private bool typingId = false, typingName = false, typingDesc = false;
-        private bool typingCost = false, typingX = false, typingY = false;
-
-        private List<string> selectedPrerequisites = new();
-
-        private Rectangle idField = new(20, 50, 280, 30);
-        private Rectangle nameField = new(20, 100, 280, 30);
-        private Rectangle descField = new(20, 150, 280, 30);
-        private Rectangle costField = new(20, 200, 100, 30);
-        private Rectangle xField = new(20, 250, 100, 30);
-        private Rectangle yField = new(20, 300, 100, 30);
-        private Rectangle iconField = new(20, 350, 280, 30);
-        private Rectangle saveButton = new(20, 400, 100, 30);
-        private Rectangle saveYamlButton = new(140, 400, 150, 30);
-        private Rectangle focusShowField;
-
-        private string statusMessage = "";
-        private float statusTimer = 0;
-
-        private Dictionary<string, Texture2D> loadedIcons = new();
-
+        private string idInput, iconInput, nameInput, descInput;
+        private string costInput, xInput, yInput;
+        private bool typingId, typingName, typingDesc;
+        private bool typingCost, typingX, typingY;
+        private string statusMessage;
+        private float statusTimer;
+        private Rectangle idField;
+        private Rectangle nameField;
+        private Rectangle descField;
+        private Rectangle costField;
+        private Rectangle xField;
+        private Rectangle yField;
+        private Rectangle iconField;
+        private Rectangle saveButton;
+        private Rectangle saveYamlButton;
+        private Dictionary<string, Texture2D> loadedIcons;
         private Focus? pendingDeleteFocus = null;
-        private bool isDeleteConfirming = false;
         private Rectangle pendingRect = new();
-        
+        private FocusPrerequisitesService focusPrerequisites;
+        private FocusRendererService focusRenderer;
+
+
+        public Gui(List<Focus>? existingFocuses = null)
+        {
+            focuses = existingFocuses ?? new List<Focus>();
+
+            idInput = "";
+            iconInput = "";
+            nameInput = "";
+            descInput = "";
+            costInput = "10";
+            xInput = "0";
+            yInput = "0";
+
+            statusMessage = "";
+            statusTimer = 2.5f;
+
+            typingId = false;
+            typingName = false;
+            typingDesc = false;
+            typingCost = false;
+            typingX = false;
+            typingY = false;
+
+            idField = new Rectangle(20, 50, 280, 30);
+            nameField = new Rectangle(20, 100, 280, 30);
+            descField = new Rectangle(20, 150, 280, 30);
+            costField = new Rectangle(20, 200, 100, 30);
+            xField = new Rectangle(20, 250, 100, 30);
+            yField = new Rectangle(20, 300, 100, 30);
+            iconField = new Rectangle(20, 350, 280, 30);
+            saveButton = new Rectangle(20, 400, 100, 30);
+            saveYamlButton = new Rectangle(140, 400, 150, 30);
+
+            loadedIcons = new Dictionary<string, Texture2D>();
+
+            focusPrerequisites = new FocusPrerequisitesService();
+            focusRenderer = new FocusRendererService();
+        }
+
         public void Update()
         {
             Vector2 mouse = GetMousePosition();
 
-            if (IsMouseButtonPressed(MouseButton.Left))
+            if (CheckCollisionPointRec(mouse, idField))
+                typingId = true;
+            else if (CheckCollisionPointRec(mouse, nameField))
+                typingName = true;
+            else if (CheckCollisionPointRec(mouse, descField))
+                typingDesc = true;
+            else if (CheckCollisionPointRec(mouse, costField))
+                typingCost = true;
+            else if (CheckCollisionPointRec(mouse, xField))
+                typingX = true;
+            else if (CheckCollisionPointRec(mouse, yField))
+                typingY = true;
+            else
             {
-                typingId = CheckCollisionPointRec(mouse, idField);
-                typingName = CheckCollisionPointRec(mouse, nameField);
-                typingDesc = CheckCollisionPointRec(mouse, descField);
-                typingCost = CheckCollisionPointRec(mouse, costField);
-                typingX = CheckCollisionPointRec(mouse, xField);
-                typingY = CheckCollisionPointRec(mouse, yField);
-
-                if (CheckCollisionPointRec(mouse, iconField))
-                {
-                    Thread thread = new(() =>
-                    {
-                        OpenFileDialog ofd = new()
-                        {
-                            Filter = "Image Files (*.dds;*.png)|*.dds;*.png",
-                            Title = "Choose a focus icon"
-                        };
-
-                        if (ofd.ShowDialog() == DialogResult.OK)
-                        {
-                            string selectedPath = Path.GetFullPath(ofd.FileName);
-                            iconInput = selectedPath;
-
-                            if (!loadedIcons.ContainsKey(selectedPath))
-                            {
-                                try
-                                {
-                                    Texture2D tex = LoadTexture(selectedPath);
-                                    loadedIcons[selectedPath] = tex;
-                                }
-                                catch (Exception ex)
-                                {
-                                    statusMessage = "Error loading icon: " + ex.Message;
-                                    statusTimer = 3f;
-                                }
-                            }
-                        }
-                    });
-
-                    thread.SetApartmentState(ApartmentState.STA);
-                    thread.Start();
-                }
-
-                if (CheckCollisionPointRec(mouse, saveButton))
-                    SaveFocus();
-
-                if (CheckCollisionPointRec(mouse, saveYamlButton))
-                    SaveFocusYaml();
-
-                int y = 460;
-                foreach (var focus in focuses)
-                {
-                    Rectangle checkbox = new(20, y, 20, 20);
-                    if (CheckCollisionPointRec(mouse, checkbox))
-                    {
-                        if (selectedPrerequisites.Contains(focus.Id))
-                            selectedPrerequisites.Remove(focus.Id);
-                        else
-                            selectedPrerequisites.Add(focus.Id);
-                    }
-
-                    y += 30;
-                }
+                typingId = typingName = typingDesc = typingCost = typingX = typingY = false;
             }
 
-            int key = GetCharPressed();
-            while (key > 0)
-            {
-                char c = (char)key;
+            CaptureTextInput();
+        }
 
-                if (typingId) idInput += c;
-                else if (typingName) nameInput += c;
-                else if (typingDesc) descInput += c;
-                else if (typingCost && char.IsDigit(c)) costInput += c;
-                else if (typingX && char.IsDigit(c)) xInput += c;
-                else if (typingY && char.IsDigit(c)) yInput += c;
-
-                key = GetCharPressed();
-            }
-
-            if (IsKeyPressed(KeyboardKey.Backspace))
-            {
-                if (typingId && idInput.Length > 0) idInput = idInput[..^1];
-                else if (typingName && nameInput.Length > 0) nameInput = nameInput[..^1];
-                else if (typingDesc && descInput.Length > 0) descInput = descInput[..^1];
-                else if (typingCost && costInput.Length > 0) costInput = costInput[..^1];
-                else if (typingX && xInput.Length > 0) xInput = xInput[..^1];
-                else if (typingY && yInput.Length > 0) yInput = yInput[..^1];
-            }
-
-            if (statusTimer > 0)
-                statusTimer -= GetFrameTime();
+        private void CaptureTextInput()
+        {
+            // CAPTURE INPUT
+            if (typingId) focusRenderer.DrawTextBox(ref idInput, ref typingId, idField);
+            if (typingName) focusRenderer.DrawTextBox(ref nameInput, ref typingName, nameField);
+            if (typingDesc) focusRenderer.DrawTextBox(ref descInput, ref typingDesc, descField);
+            if (typingCost) focusRenderer.DrawTextBox(ref costInput, ref typingCost, costField);
+            if (typingX) focusRenderer.DrawTextBox(ref xInput, ref typingX, xField);
+            if (typingY) focusRenderer.DrawTextBox(ref yInput, ref typingY, yField);
         }
 
         public void Render()
         {
-            DrawRectangle(0, 0, 320, 720, Color.DarkGray);
-            DrawText("Focus Creator", 20, 10, 21, Color.Blue);
+            Vector2 mouse = GetMousePosition();
 
-            DrawField(idField, typingId, $"ID: {idInput}");
-            DrawField(nameField, typingName, $"Name: {nameInput}");
-            DrawField(descField, typingDesc, $"Desc: {descInput}");
-            DrawField(costField, typingCost, $"Cost: {costInput}");
-            DrawField(xField, typingX, $"X: {xInput}");
-            DrawField(yField, typingY, $"Y: {yInput}");
-            DrawField(iconField, false, $"Icon: {Path.GetFileName(iconInput)}");
+            FocusSaveService focusSave = new FocusSaveService();
 
-            DrawRectangleRec(saveButton, Color.Green);
-            DrawText("Save", 30, 405, 20, Color.Black);
+            DrawRectangle(0, 0, 320, 720, Raylib_cs.Color.DarkGray);
+            DrawText("Focus Creator", 20, 10, 21, Raylib_cs.Color.Blue);
 
-            DrawRectangleRec(saveYamlButton, Color.DarkGreen);
-            DrawText("Save Yaml", 145, 405, 20, Color.Black);
+            // RENDER FIELDS
+            focusRenderer.DrawField(idField, typingId, $"ID: {idInput}");
+            focusRenderer.DrawField(nameField, typingName, $"Name: {nameInput}");
+            focusRenderer.DrawField(descField, typingDesc, $"Desc: {descInput}");
+            focusRenderer.DrawField(costField, typingCost, $"Cost: {costInput}");
+            focusRenderer.DrawField(xField, typingX, $"X: {xInput}");
+            focusRenderer.DrawField(yField, typingY, $"Y: {yInput}");
+            focusRenderer.DrawField(iconField, false, $"Icon: {Path.GetFileName(iconInput)}");
 
-            DrawText("Prerequisites:", 20, 440, 18, Color.White);
-            int y = 460;
-            foreach (var focus in focuses)
-            {
-                bool selected = selectedPrerequisites.Contains(focus.Id);
-                DrawRectangle(20, y, 20, 20, selected ? Color.Green : Color.White);
-                DrawRectangleLines(20, y, 20, 20, Color.Black);
-                DrawText(focus.Id, 50, y, 16, Color.Black);
-                y += 30;
-            }
+            if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(GetMousePosition(), iconField))
+                focusRenderer.WindowsExplorerOpen(mouse, iconField, ref iconInput, loadedIcons, ref statusMessage, ref statusTimer);
+
+            DrawRectangleRec(saveButton, Raylib_cs.Color.Green);
+            DrawText("Save", 30, 405, 20, Raylib_cs.Color.Black);
+
+            if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(GetMousePosition(), saveButton))
+                focusSave.TryAddFocus(idInput, nameInput, descInput, xInput, yInput, costInput, iconInput, focusPrerequisites.selectedPrerequisites, focuses);
+
+            DrawRectangleRec(saveYamlButton, Raylib_cs.Color.DarkGreen);
+            DrawText("Save Yaml", 145, 405, 20, Raylib_cs.Color.Black);
+
+            if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(GetMousePosition(), saveYamlButton))
+                focusSave.SaveFocusYaml(focuses);
+
+            // PREREQUISITES
+            focusPrerequisites.RenderPrerequisites(focuses, mouse);
+
 
             if (!string.IsNullOrEmpty(statusMessage) && statusTimer > 0)
-                DrawText(statusMessage, 320 + 20, 20, 20, Color.DarkGreen);
+                DrawText(statusMessage, 320 + 20, 20, 20, Raylib_cs.Color.DarkGreen);
 
-            int xStart = 340, yStart = 50;
+            focusRenderer.RenderFocuses(focuses, mouse, loadedIcons, ref pendingDeleteFocus, ref pendingRect);
 
-            foreach (var focus in focuses)
+            if (pendingDeleteFocus != null)
             {
-                foreach (string prereqId in focus.Prerequisites)
+                var screen = new Vector2(GetScreenWidth(), GetScreenHeight());
+                Rectangle box = new((screen.X - screen.X * 0.9f) / 2, (screen.Y - screen.Y * 0.9f) / 2, screen.X * 0.9f, screen.Y * 0.9f);
+
+                var result = focusRenderer.Show(box, mouse, "Delete focus?");
+                if (result == true)
                 {
-                    var prereq = focuses.Find(f => f.Id == prereqId);
-                    if (prereq != null)
-                    {
-                        Vector2 start = new(xStart + prereq.X * 80 + 32, yStart + prereq.Y * 80 + 64);
-                        Vector2 end = new(xStart + focus.X * 80 + 32, yStart + focus.Y * 80);
-                        DrawLineEx(start, end, 2, Color.Red);
-                    }
+                    focuses.Remove(pendingDeleteFocus);
+                    pendingDeleteFocus = null;
+                }
+                else if (result == false)
+                {
+                    pendingDeleteFocus = null;
                 }
             }
-            
-            Vector2 mouse = Raylib.GetMousePosition();
-            
-            for (int i = focuses.Count - 1; i >= 0; i--)
-            {
-                var focus = focuses[i];
-                int fx = xStart + focus.X * 80;
-                int fy = yStart + focus.Y * 80;
 
-                Rectangle rect = new Rectangle(fx, fy, 64, 64);
-
-                Raylib.DrawRectangleRec(rect, Color.SkyBlue);
-
-                if (!string.IsNullOrWhiteSpace(focus.Icon) && loadedIcons.ContainsKey(focus.Icon))
-                {
-                    Raylib.DrawTexture(loadedIcons[focus.Icon], fx, fy, Color.White);
-                }
-
-                bool hovered = Raylib.CheckCollisionPointRec(mouse, rect);
-
-                if (hovered)
-                {
-                    Raylib.DrawRectangleLinesEx(rect, 3, Color.Red);
-                    
-                    if (Raylib.IsMouseButtonPressed(MouseButton.Left) && pendingDeleteFocus == null)
-                    {
-                        pendingDeleteFocus = focus;
-                        pendingRect = rect;
-                        isDeleteConfirming = true;
-                    }
-                }
-
-                Raylib.DrawRectangleLines(fx, fy, 64, 64, Color.Black);
-                Raylib.DrawText(focus.Id, fx + 5, fy + 48, 12, Color.Black);
-            }
-            
-            if (pendingDeleteFocus != null && isDeleteConfirming)   
-            {
-                int screenWidth = Raylib.GetScreenWidth();
-                int screenHeight = Raylib.GetScreenHeight();
-
-                int boxWidth = (int)(screenWidth * 0.9f);
-                int boxHeight = (int)(screenHeight * 0.9f);
-
-                int boxX = (screenWidth - boxWidth) / 2;
-                int boxY = (screenHeight - boxHeight) / 2;
-
-                Rectangle confirmBox = new Rectangle(boxX, boxY, boxWidth, boxHeight);
-
-                Raylib.DrawRectangleRec(confirmBox, Color.LightGray);
-                Raylib.DrawRectangleLinesEx(confirmBox, 2, Color.DarkGray);
-
-                Raylib.DrawText("Delete focus?", boxX + 20, boxY + 15, 16, Color.Black);
-                
-                Rectangle yesBtn = new Rectangle(boxX + 20, boxY + 50, 70, 30);
-                Rectangle noBtn = new Rectangle(boxX + 110, boxY + 50, 70, 30);
-
-                Raylib.DrawRectangleRec(yesBtn, Color.Green);
-                Raylib.DrawText("Yes", (int)yesBtn.X + 15, (int)yesBtn.Y + 8, 16, Color.Black);
-
-                Raylib.DrawRectangleRec(noBtn, Color.Red);
-                Raylib.DrawText("No", (int)noBtn.X + 15, (int)noBtn.Y + 8, 16, Color.Black);
-                
-                if (Raylib.IsMouseButtonReleased(MouseButton.Left))
-                {
-                    if (Raylib.CheckCollisionPointRec(mouse, yesBtn))
-                    {
-                        focuses.Remove(pendingDeleteFocus);
-                        pendingDeleteFocus = null;
-                        isDeleteConfirming = false;
-                    }
-                    else if (Raylib.CheckCollisionPointRec(mouse, noBtn))
-                    {
-                        pendingDeleteFocus = null;
-                        isDeleteConfirming = false;
-                    }
-                }
-            }
-        }
-
-        private void DrawField(Rectangle field, bool active, string text)
-        {
-            DrawRectangleRec(field, active ? Color.LightGray : Color.Gray);
-            DrawText(text, (int)field.X + 5, (int)field.Y + 5, 20, Color.Black);
-        }
-
-        private void SaveFocus()
-        {
-            if (string.IsNullOrWhiteSpace(idInput)) return;
-
-            int.TryParse(xInput, out int xVal);
-            int.TryParse(yInput, out int yVal);
-            int.TryParse(costInput, out int costVal);
-
-            var newFocus = new Focus(idInput, iconInput, nameInput, descInput, xVal, yVal, costVal);
-            newFocus.Prerequisites.AddRange(selectedPrerequisites);
-
-            focuses.Add(newFocus);
-            statusMessage = "Focus saved successfully!";
-            statusTimer = 2.5f;
-
-            idInput = nameInput = descInput = iconInput = "";
-            xInput = yInput = "0";
-            costInput = "10";
-            selectedPrerequisites.Clear();
-        }
-
-        private void SaveFocusYaml()
-        {
-            if (focuses.Count == 0)
-            {
-                statusMessage = "No focus created to save!";
-                statusTimer = 2.5f;
-                return;
-            }
-
-            try
-            {
-                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                string fullPath = Path.Combine(desktopPath, $"focus_{focuses[0].Id}_tree.txt");
-                focuses[0].GenerateFocusTreeFile(focuses, fullPath);
-                statusMessage = $"File saved to desktop!";
-            }
-            catch (Exception ex)
-            {
-                statusMessage = $"Erro: {ex.Message}";
-            }
-
-            statusTimer = 3f;
         }
     }
 }

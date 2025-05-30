@@ -1,4 +1,4 @@
-﻿namespace h4nationalfocusgui
+﻿namespace H4NationalFocusGUI.components
 {
     public class Focus
     {
