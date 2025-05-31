@@ -1,3 +1,4 @@
+using System.Numerics;
 using static Raylib_cs.Raylib;
 
 namespace H4NationalFocusGUI.services
@@ -6,7 +7,6 @@ namespace H4NationalFocusGUI.services
     {
         public string Message;
         public float Timer;
-
         public GuiService()
         {
             Message = "";
@@ -28,7 +28,26 @@ namespace H4NationalFocusGUI.services
         public void Draw()
         {
             if (!string.IsNullOrEmpty(Message) && Timer > 0)
-                DrawText(Message, 340, 20, 20, Raylib_cs.Color.DarkGreen);
+            {
+                int fontSize = 20;
+                int padding = 10;
+
+                int screenWidth = GetScreenWidth();
+                int screenHeight = GetScreenHeight();
+
+                int textWidth = MeasureText(Message, fontSize);
+
+                int posX = screenWidth - textWidth - padding;
+                int posY = screenHeight - fontSize - padding;
+
+                DrawText(Message, posX, posY, fontSize, Raylib_cs.Color.DarkGreen);
+            }
+        }
+
+        public void ToggleOnClick(Vector2 mouse, Raylib_cs.Rectangle rect, ref bool flag)
+        {
+            if (IsMouseButtonPressed(Raylib_cs.MouseButton.Left) && CheckCollisionPointRec(mouse, rect))
+                flag = !flag;
         }
     }
 }

@@ -13,15 +13,14 @@ namespace H4NationalFocusGUI.functional
         Vector2 mouse;
         Vector2 screen;
         private List<Focus> focuses = new();
-        private string idInput, iconInput, nameInput, descInput, countryNameInput, createCountryInput;
-        private string costInput, xInput, yInput;
-        private bool typingId, typingName, typingDesc, typingCreateFocus;
-        private bool typingCost, typingX, typingY;
+        private string idInput, iconInput, nameInput, descInput, countryNameInput, createCountryInput, costInput, xInput, yInput;
         private string statusMessage;
         private float statusTimer;
         private bool showCreateFocusMenu = false;
         private bool showSetPrerequsites = false;
         private ActiveTextField activeField = ActiveTextField.None;
+        private Typings typings = Typings.None;
+        private bool IsTypingActive(Typings typing) => typings == typing;
         private Dictionary<string, Texture2D> loadedIcons;
         private Focus? pendingDeleteFocus = null;
         private GuiLayout layout;
@@ -32,6 +31,7 @@ namespace H4NationalFocusGUI.functional
         private GoalsService goalsService;
         private TexconvWrapper texconvWrapper;
         private FocusSaveService focusSave;
+        private FocusLoadService focusLoadService;
 
         public Gui(List<Focus>? existingFocuses = null)
         {
@@ -52,13 +52,6 @@ namespace H4NationalFocusGUI.functional
             statusMessage = "";
             statusTimer = 2.5f;
 
-            typingCreateFocus = false;
-            typingName = false;
-            typingDesc = false;
-            typingCost = false;
-            typingX = false;
-            typingY = false;
-
             loadedIcons = new Dictionary<string, Texture2D>();
 
             layout = new GuiLayout();
@@ -69,11 +62,13 @@ namespace H4NationalFocusGUI.functional
             goalsService = new GoalsService();
             texconvWrapper = new TexconvWrapper();
             focusSave = new FocusSaveService();
+            focusLoadService = new FocusLoadService();
         }
 
         public void Update()
         {
             mouse = GetMousePosition();
+            guiService.Update();
 
             if (showCreateFocusMenu)
             {
@@ -100,7 +95,6 @@ namespace H4NationalFocusGUI.functional
                 CaptureTextInput();
             }
         }
-
 
         private void CaptureTextInput()
         {
@@ -142,44 +136,44 @@ namespace H4NationalFocusGUI.functional
             // RENDER FOCUSES FIRST
             focusRenderer.RenderFocuses(focuses, mouse, loadedIcons, ref pendingDeleteFocus, ref layout.PendingRect);
 
-            focusRenderer.DrawField(layout.CreateFocusField, typingCreateFocus, $"Create Focus");
+            focusRenderer.DrawField(layout.CreateFocusField, IsTypingActive(Typings.TypingCreateFocus), "Create Focus");
 
-            if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.CreateFocusField))
-            {
-                showCreateFocusMenu = !showCreateFocusMenu;
-            }
-
+            guiService.ToggleOnClick(mouse, layout.CreateFocusField, ref showCreateFocusMenu);
             if (showCreateFocusMenu)
-            {
                 DrawCreateFocusMenu(mouse);
-            }
 
-            DrawRectangleRec(layout.SaveYamlButton, Raylib_cs.Color.DarkGreen);
-            DrawText("Save Yaml", 145, 405, 20, Raylib_cs.Color.Black);
+            focusRenderer.DrawField(layout.SaveYamlButton, IsTypingActive(Typings.TypingSaveYaml), "Save Yaml", Raylib_cs.Color.Lime);
+            focusRenderer.DrawField(layout.LoadFocusButton, IsTypingActive(Typings.TypingLoadFocus), "Load Focus", Raylib_cs.Color.Lime);
 
-            if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(GetMousePosition(), layout.SaveYamlButton))
+            // SAVE YAML
+            if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.SaveYamlButton))
             {
                 focusSave.SaveFocusYaml(focuses);
                 localisation.CreateLocalisation(focuses, countryNameInput);
                 goalsService.CreateGoalsGfx(focuses, countryNameInput);
 
-                statusMessage = "Yaml saved";
-                statusTimer = 2.5f;
+                guiService.Show("Yaml Saved");
             }
 
-            if (!string.IsNullOrEmpty(statusMessage) && statusTimer > 0)
+            // LOAD Focus
+            if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.LoadFocusButton))
             {
-                int fontSize = 20;
-                int margem = 10;
-                int textWidth = MeasureText(statusMessage, fontSize);
-                int textHeight = fontSize;
+                var loadedFocuses = focusLoadService.WindowsExplorerOpen(mouse, layout.LoadFocusButton, ref statusMessage, ref statusTimer);
 
-                int posX = (int)(screen.X - textWidth - margem);
-                int posY = (int)(screen.Y - textHeight - margem);
-
-                DrawText(statusMessage, posX, posY, fontSize, Raylib_cs.Color.DarkGreen);
+                if (loadedFocuses != null)
+                {
+                    focuses = loadedFocuses;
+                    guiService.Show("Focus Loaded");
+                }
             }
 
+            guiService.Draw();
+
+            DrawDeleteFocus();
+        }
+
+        private void DrawDeleteFocus()
+        {
             if (pendingDeleteFocus != null)
             {
                 Rectangle box = new((screen.X - screen.X * 0.9f) / 2, (screen.Y - screen.Y * 0.9f) / 2, screen.X * 0.9f, screen.Y * 0.9f);
@@ -210,16 +204,15 @@ namespace H4NationalFocusGUI.functional
         {
             DrawRectangleRec(layout.CreateMenuPanel, Raylib_cs.Color.DarkGray);
 
-            focusRenderer.DrawField(layout.CreateIdField, typingId, $"ID: {idInput}");
-            focusRenderer.DrawField(layout.CreateNameField, typingName, $"Name: {nameInput}");
-            focusRenderer.DrawField(layout.CreateDescField, typingDesc, $"Desc: {descInput}");
-            focusRenderer.DrawField(layout.CreateCostField, typingCost, $"Cost: {costInput}");
-            focusRenderer.DrawField(layout.CreateXField, typingX, $"X: {xInput}");
-            focusRenderer.DrawField(layout.CreateYField, typingY, $"Y: {yInput}");
+            focusRenderer.DrawField(layout.CreateIdField, IsTypingActive(Typings.TypingId), $"ID: {idInput}");
+            focusRenderer.DrawField(layout.CreateNameField, IsTypingActive(Typings.TypingName), $"Name: {nameInput}");
+            focusRenderer.DrawField(layout.CreateDescField, IsTypingActive(Typings.TypingDesc), $"Desc: {descInput}");
+            focusRenderer.DrawField(layout.CreateCostField, IsTypingActive(Typings.TypingCost), $"Cost: {costInput}");
+            focusRenderer.DrawField(layout.CreateXField, IsTypingActive(Typings.TypingX), $"X: {xInput}");
+            focusRenderer.DrawField(layout.CreateYField, IsTypingActive(Typings.TypingY), $"Y: {yInput}");
             focusRenderer.DrawField(layout.CreateIconField, false, $"Icon: {Path.GetFileName(iconInput)}");
 
-            DrawRectangleRec(layout.CreateSaveButton, Raylib_cs.Color.DarkGreen);
-            DrawText("Save", (int)layout.CreateSaveButton.X + 10, (int)layout.CreateSaveButton.Y + 5, 20, Raylib_cs.Color.White);
+            focusRenderer.DrawField(layout.CreateSaveButton, IsTypingActive(Typings.TypingSaveFocus), "Save", Raylib_cs.Color.Lime);
 
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.CreateIconField))
             {
@@ -242,8 +235,7 @@ namespace H4NationalFocusGUI.functional
                 var (success, message) = focusSave.TryAddFocus(id, nameInput, descInput, xInput, yInput, costInput, iconReference,
                  focusPrerequisites.selectedPrerequisites, focuses);
 
-                statusMessage = message;
-                statusTimer = 2.5f;
+                guiService.Show(message);
 
                 if (success)
                 {
@@ -252,17 +244,11 @@ namespace H4NationalFocusGUI.functional
             }
 
             // PREREQUISITES
-            focusRenderer.DrawField(layout.CreatePrereqFocusField, typingCreateFocus, $"Set Prerequisites");
+            focusRenderer.DrawField(layout.CreatePrereqFocusField, IsTypingActive(Typings.TypingCreateFocus), $"Set Prerequisites");
 
-            if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.CreatePrereqFocusField))
-            {
-                showSetPrerequsites = !showSetPrerequsites;
-            }
-
+            guiService.ToggleOnClick(mouse, layout.CreatePrereqFocusField, ref showSetPrerequsites);
             if (showSetPrerequsites)
-            {
                 DrawCreatePrerequisitesMenu(mouse);
-            }
         }
     }
 }

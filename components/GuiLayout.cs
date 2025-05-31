@@ -4,8 +4,9 @@ namespace H4NationalFocusGUI.components
     {
         public Raylib_cs.Rectangle CreateMenuPanel = new(310, 0, 320, 720);
         public Raylib_cs.Rectangle CreateMenuPanelPrerequisites => new(CreateMenuPanel.X + CreateMenuPanel.Width, CreateMenuPanel.Y, 320, 720);
-        
-        public Raylib_cs.Rectangle SaveYamlButton = new(140, 400, 150, 30);
+
+        public Raylib_cs.Rectangle SaveYamlButton = new(20, 400, 150, 30);
+        public Raylib_cs.Rectangle LoadFocusButton = new(20, 440, 150, 30);
 
         public Raylib_cs.Rectangle CreateFocusField = new(20, 10, 280, 30);
         public Raylib_cs.Rectangle CountryNameField = new(20, 10, 280, 30);

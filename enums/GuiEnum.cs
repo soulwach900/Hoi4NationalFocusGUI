@@ -14,4 +14,18 @@ namespace H4NationalFocusGUI.enums
         Icon
     }
 
+    public enum Typings
+    {
+        None,
+        TypingId,
+        TypingName,
+        TypingDesc,
+        TypingCreateFocus,
+        TypingLoadFocus,
+        TypingSaveYaml,
+        TypingSaveFocus,
+        TypingCost,
+        TypingX,
+        TypingY
+    }
 }

@@ -36,21 +36,24 @@ namespace H4NationalFocusGUI.services
             }
 
             DrawRectangleRec(fieldRect, isActive ? Raylib_cs.Color.LightGray : Raylib_cs.Color.Gray);
-            DrawText(input, (int)fieldRect.X + 5, (int)fieldRect.Y + 5, 20, Raylib_cs.Color.Black);
+            DrawText(input, (int)fieldRect.X + 5, (int)fieldRect.Y + 5, 20, Raylib_cs.Color.White);
         }
 
-        public void DrawField(Raylib_cs.Rectangle field, bool active, string text)
+        public void DrawField(Raylib_cs.Rectangle field, bool active, string text, Raylib_cs.Color? color = null)
         {
-            DrawRectangleRec(field, active ? Raylib_cs.Color.LightGray : Raylib_cs.Color.Gray);
-            DrawText(text, (int)field.X + 5, (int)field.Y + 5, 20, Raylib_cs.Color.Black);
+            Raylib_cs.Color fillColor = color ?? (active ? Raylib_cs.Color.LightGray : Raylib_cs.Color.Gray);
+
+            DrawRectangleRec(field, fillColor);
+            DrawText(text, (int)field.X + 5, (int)field.Y + 5, 20, Raylib_cs.Color.White);
         }
 
-        public bool WindowsExplorerOpen(Vector2 mouse,
-    Raylib_cs.Rectangle iconField,
-    ref string iconInput,
-    Dictionary<string, Texture2D> loadedIcons,
-    ref string statusMessage,
-    ref float statusTimer)
+        public bool WindowsExplorerOpen(
+        Vector2 mouse,
+        Raylib_cs.Rectangle iconField,
+        ref string iconInput,
+        Dictionary<string, Texture2D> loadedIcons,
+        ref string statusMessage,
+        ref float statusTimer)
         {
             if (CheckCollisionPointRec(mouse, iconField))
             {
@@ -152,7 +155,7 @@ namespace H4NationalFocusGUI.services
                 }
 
                 DrawRectangleLines(fx, fy, 64, 64, Raylib_cs.Color.Black);
-                DrawText(focus.Id, fx + 5, fy + 48, 12, Raylib_cs.Color.Black);
+                DrawText(focus.Id, fx + 5, fy + 48, 12, Raylib_cs.Color.White);
             }
         }
 
@@ -160,16 +163,16 @@ namespace H4NationalFocusGUI.services
         {
             DrawRectangleRec(rect, Raylib_cs.Color.LightGray);
             DrawRectangleLinesEx(rect, 2, Raylib_cs.Color.DarkGray);
-            DrawText(message, (int)rect.X + 20, (int)rect.Y + 15, 16, Raylib_cs.Color.Black);
+            DrawText(message, (int)rect.X + 20, (int)rect.Y + 15, 16, Raylib_cs.Color.White);
 
             Raylib_cs.Rectangle yesBtn = new(rect.X + 20, rect.Y + 50, 70, 30);
             Raylib_cs.Rectangle noBtn = new(rect.X + 110, rect.Y + 50, 70, 30);
 
             DrawRectangleRec(yesBtn, Raylib_cs.Color.Green);
-            DrawText("Yes", (int)yesBtn.X + 15, (int)yesBtn.Y + 8, 16, Raylib_cs.Color.Black);
+            DrawText("Yes", (int)yesBtn.X + 15, (int)yesBtn.Y + 8, 16, Raylib_cs.Color.White);
 
             DrawRectangleRec(noBtn, Raylib_cs.Color.Red);
-            DrawText("No", (int)noBtn.X + 15, (int)noBtn.Y + 8, 16, Raylib_cs.Color.Black);
+            DrawText("No", (int)noBtn.X + 15, (int)noBtn.Y + 8, 16, Raylib_cs.Color.White);
 
             if (IsMouseButtonPressed(MouseButton.Left))
             {
