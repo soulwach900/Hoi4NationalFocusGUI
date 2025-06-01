@@ -11,12 +11,7 @@ namespace H4NationalFocusGUI.enums
         X,
         Y,
         CreateFocus,
-        Icon
-    }
-
-    public enum Typings
-    {
-        None,
+        Icon,
         TypingId,
         TypingName,
         TypingDesc,

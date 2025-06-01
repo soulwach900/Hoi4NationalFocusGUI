@@ -2,14 +2,14 @@ using System.Diagnostics;
 
 namespace H4NationalFocusGUI.functional
 {
-    public class TexconvWrapper
+    public static class TexconvWrapper
     {
-        public static bool ConvertPngToDds(string texconvPath, string inputPngPath, string outputDirectory, string focusId)
+        public static void ConvertPngToDds(string texconvPath, string inputPngPath, string outputDirectory,
+            string focusId)
         {
-            if (!File.Exists(texconvPath) || !File.Exists(inputPngPath))
-                return false;
+            if (!File.Exists(texconvPath) || !File.Exists(inputPngPath)) return;
 
-            string tempInputCopy = Path.Combine(Path.GetTempPath(), $"{focusId}.png");
+            var tempInputCopy = Path.Combine(Path.GetTempPath(), $"{focusId}.png");
             File.Copy(inputPngPath, tempInputCopy, true);
 
             var process = new Process();
@@ -20,18 +20,12 @@ namespace H4NationalFocusGUI.functional
             process.StartInfo.RedirectStandardError = true;
 
             process.Start();
-            string stdout = process.StandardOutput.ReadToEnd();
-            string stderr = process.StandardError.ReadToEnd();
+            var stderr = process.StandardError.ReadToEnd();
             process.WaitForExit();
 
-            if (process.ExitCode != 0)
-            {
-                Console.WriteLine("texconv error:");
-                Console.WriteLine(stderr);
-                return false;
-            }
-
-            return true;
+            if (process.ExitCode == 0) return;
+            Console.WriteLine("texconv error:");
+            Console.WriteLine(stderr);
         }
     }
 }

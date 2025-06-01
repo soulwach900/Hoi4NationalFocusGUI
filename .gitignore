@@ -42,6 +42,8 @@ ScaffoldingReadMe.txt
 CodeCoverage/
 mod/
 thirdparty/texconv/*.exe
+.idea
+H4NationalFocusGUI.sln.DotSettings.user
 
 # MSBuild Binary and Structured Log
 *.binlog

@@ -4,7 +4,7 @@ using static Raylib_cs.Raylib;
 
 namespace H4NationalFocusGUI.services
 {
-    public class FocusLoadService()
+    public class FocusLoadService
     {
         public List<Focus>? WindowsExplorerOpen(
             Vector2 mouse,
@@ -70,60 +70,58 @@ namespace H4NationalFocusGUI.services
 
                 if (trimmed.Contains("focus = {"))
                 {
-                    currentFocus = new Focus(id: "", icon: "", name: "", description: "", x: 0, y: 0, cost: 10);
+                    currentFocus = new Focus(id: "", icon: "", name: "", description: "", x: 0, y: 0, cost: 10, iconPath: "");
                     inFocusBlock = true;
                     inPrereqBlock = false;
                     continue;
                 }
 
-                if (inFocusBlock && currentFocus != null)
+                if (!inFocusBlock || currentFocus == null) continue;
+                if (trimmed == "}")
+                {
+                    focuses.Add(currentFocus);
+                    currentFocus = null;
+                    inFocusBlock = false;
+                    continue;
+                }
+
+                if (trimmed.StartsWith("id = "))
+                    currentFocus.Id = trimmed.Substring("id = ".Length).Trim();
+                else if (trimmed.StartsWith("icon = "))
+                    currentFocus.IconPath = trimmed.Substring("icon = ".Length).Trim();
+                else if (trimmed.StartsWith("x = ") && int.TryParse(trimmed.Substring("x = ".Length), out var x))
+                    currentFocus.X = x;
+                else if (trimmed.StartsWith("y = ") && int.TryParse(trimmed.Substring("y = ".Length), out var y))
+                    currentFocus.Y = y;
+                else if (trimmed.StartsWith("cost = ") && int.TryParse(trimmed.Substring("cost = ".Length), out var cost))
+                    currentFocus.Cost = cost;
+
+                else if (trimmed.StartsWith("prerequisite ="))
+                {
+                    if (trimmed.Contains("focus =") && trimmed.EndsWith("}"))
+                    {
+                        var match = System.Text.RegularExpressions.Regex.Match(trimmed, @"focus\s*=\s*([^\s}]+)");
+                        if (match.Success)
+                        {
+                            currentFocus.Prerequisites.Add(match.Groups[1].Value.Trim());
+                        }
+                    }
+                    else
+                    {
+                        inPrereqBlock = true;
+                    }
+                }
+
+                else if (inPrereqBlock)
                 {
                     if (trimmed == "}")
                     {
-                        focuses.Add(currentFocus);
-                        currentFocus = null;
-                        inFocusBlock = false;
-                        continue;
+                        inPrereqBlock = false;
                     }
-
-                    if (trimmed.StartsWith("id = "))
-                        currentFocus.Id = trimmed.Substring("id = ".Length).Trim();
-                    else if (trimmed.StartsWith("icon = "))
-                        currentFocus.Icon = trimmed.Substring("icon = ".Length).Trim();
-                    else if (trimmed.StartsWith("x = ") && int.TryParse(trimmed.Substring("x = ".Length), out var x))
-                        currentFocus.X = x;
-                    else if (trimmed.StartsWith("y = ") && int.TryParse(trimmed.Substring("y = ".Length), out var y))
-                        currentFocus.Y = y;
-                    else if (trimmed.StartsWith("cost = ") && int.TryParse(trimmed.Substring("cost = ".Length), out var cost))
-                        currentFocus.Cost = cost;
-
-                    else if (trimmed.StartsWith("prerequisite ="))
+                    else if (trimmed.StartsWith("focus = "))
                     {
-                        if (trimmed.Contains("focus =") && trimmed.EndsWith("}"))
-                        {
-                            var match = System.Text.RegularExpressions.Regex.Match(trimmed, @"focus\s*=\s*([^\s}]+)");
-                            if (match.Success)
-                            {
-                                currentFocus.Prerequisites.Add(match.Groups[1].Value.Trim());
-                            }
-                        }
-                        else
-                        {
-                            inPrereqBlock = true;
-                        }
-                    }
-
-                    else if (inPrereqBlock)
-                    {
-                        if (trimmed == "}")
-                        {
-                            inPrereqBlock = false;
-                        }
-                        else if (trimmed.StartsWith("focus = "))
-                        {
-                            var prereqId = trimmed.Substring("focus = ".Length).Trim();
-                            currentFocus.Prerequisites.Add(prereqId);
-                        }
+                        var prereqId = trimmed.Substring("focus = ".Length).Trim();
+                        currentFocus.Prerequisites.Add(prereqId);
                     }
                 }
             }

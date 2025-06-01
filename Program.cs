@@ -4,17 +4,16 @@ using Color = Raylib_cs.Color;
 
 namespace h4nationalfocusgui
 {
-    internal class Program
+    internal static class Program
     {
-        private static Gui gui = new Gui();
-        private static FolderStructury structury = new FolderStructury();
+        private static Gui gui = new();
 
-        public static void Main(string[] args)
+        public static void Main()
         {
             InitWindow(1280, 720, "H4NationalFocusGUI");
             SetTargetFPS(60);
 
-            structury.CreateStructury();
+            FolderStructure.CreateStructure();
 
             while (!WindowShouldClose())
             {

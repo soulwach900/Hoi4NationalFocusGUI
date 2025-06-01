@@ -8,9 +8,13 @@ namespace H4NationalFocusGUI.services
 {
     public class FocusRendererService
     {
-        public void DrawTextBox(ref string input, ref ActiveTextField activeField, Raylib_cs.Rectangle fieldRect, ActiveTextField thisField)
+        private readonly GuiLayout layout = new();
+        private GuiService guiService = new();
+
+        public void DrawTextBox(ref string input, ref ActiveTextField activeField, Raylib_cs.Rectangle fieldRect,
+            ActiveTextField thisField)
         {
-            bool isActive = activeField == thisField;
+            var isActive = activeField == thisField;
 
             if (CheckCollisionPointRec(GetMousePosition(), fieldRect) && IsMouseButtonPressed(MouseButton.Left))
             {
@@ -19,13 +23,14 @@ namespace H4NationalFocusGUI.services
 
             if (isActive)
             {
-                int key = GetCharPressed();
+                var key = GetCharPressed();
                 while (key > 0)
                 {
-                    if (key >= 32 && key <= 125)
+                    if (key is >= 32 and <= 125)
                     {
                         input += (char)key;
                     }
+
                     key = GetCharPressed();
                 }
 
@@ -47,103 +52,101 @@ namespace H4NationalFocusGUI.services
             DrawText(text, (int)field.X + 5, (int)field.Y + 5, 20, Raylib_cs.Color.White);
         }
 
-        public bool WindowsExplorerOpen(
-        Vector2 mouse,
-        Raylib_cs.Rectangle iconField,
-        ref string iconInput,
-        Dictionary<string, Texture2D> loadedIcons,
-        ref string statusMessage,
-        ref float statusTimer)
+        public void WindowsExplorerOpen(
+            Vector2 mouse,
+            Raylib_cs.Rectangle iconField,
+            ref string iconInput,
+            Dictionary<string, Texture2D> loadedIcons,
+            ref string statusMessage,
+            ref float statusTimer)
         {
-            if (CheckCollisionPointRec(mouse, iconField))
+            if (!CheckCollisionPointRec(mouse, iconField)) return;
+            string? selectedPath = null;
+
+            Thread thread = new(() =>
             {
-                string? selectedPath = null;
-
-                Thread thread = new(() =>
+                OpenFileDialog ofd = new()
                 {
-                    OpenFileDialog ofd = new()
-                    {
-                        Filter = "Image Files (*.png;)|*.png;",
-                        Title = "Choose a focus icon"
-                    };
+                    Filter = "Image Files (*.png;)|*.png;",
+                    Title = "Choose a focus icon"
+                };
 
-                    if (ofd.ShowDialog() == DialogResult.OK)
-                    {
-                        selectedPath = Path.GetFullPath(ofd.FileName);
-                    }
-                });
-
-                thread.SetApartmentState(ApartmentState.STA);
-                thread.Start();
-                thread.Join();
-
-                if (!string.IsNullOrEmpty(selectedPath))
+                if (ofd.ShowDialog() == DialogResult.OK)
                 {
-                    try
-                    {
-                        string finalIconPath = $"mod/gfx/interface/goals/{Path.GetFileNameWithoutExtension(selectedPath).ToLower()}.dds";
-
-                        if (!loadedIcons.ContainsKey(finalIconPath))
-                        {
-                            Texture2D tex = LoadTexture(selectedPath);
-                            loadedIcons[finalIconPath] = tex;
-                        }
-
-                        iconInput = finalIconPath;
-
-                        iconInput = selectedPath;
-                        statusMessage = "Icon loaded successfully!";
-                        statusTimer = 3.0f;
-                        return true;
-                    }
-                    catch (Exception ex)
-                    {
-                        statusMessage = "Error loading icon: " + ex.Message;
-                        statusTimer = 3.0f;
-                        return false;
-                    }
+                    selectedPath = Path.GetFullPath(ofd.FileName);
                 }
-            }
+            });
 
-            return false;
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+
+            if (string.IsNullOrEmpty(selectedPath)) return;
+            try
+            {
+                var finalIconPath =
+                    $"mod/gfx/interface/goals/{Path.GetFileNameWithoutExtension(selectedPath).ToLower()}.dds";
+
+                if (!loadedIcons.ContainsKey(finalIconPath))
+                {
+                    var tex = LoadTexture(selectedPath);
+                    loadedIcons[finalIconPath] = tex;
+                }
+
+                iconInput = finalIconPath;
+
+                statusMessage = "Icon loaded successfully!";
+                statusTimer = 3.0f;
+            }
+            catch (Exception ex)
+            {
+                statusMessage = "Error loading icon: " + ex.Message;
+                statusTimer = 3.0f;
+            }
         }
 
         public void RenderFocuses(List<Focus> focuses, Vector2 mouse, Dictionary<string, Texture2D> loadedIcons,
-                               ref Focus? pendingDeleteFocus, ref Raylib_cs.Rectangle pendingRect)
+            ref Focus? pendingDeleteFocus, ref Raylib_cs.Rectangle pendingRect, float scrollX, float scrollY)
         {
-            int xStart = 340, yStart = 50;
+            var xStart = layout.FocusDisplayArea.X;
+            var yStart = layout.FocusDisplayArea.Y;
 
-            // Draw lines
+            // DRAW LINES
             foreach (var focus in focuses)
             {
                 foreach (var prereqId in focus.Prerequisites)
                 {
                     var prereq = focuses.Find(f => f.Id == prereqId);
-                    if (prereq != null)
-                    {
-                        Vector2 start = new(xStart + prereq.X * 80 + 32, yStart + prereq.Y * 80 + 64);
-                        Vector2 end = new(xStart + focus.X * 80 + 32, yStart + focus.Y * 80);
-                        DrawLineEx(start, end, 2, Raylib_cs.Color.Red);
-                    }
+                    if (prereq == null) continue;
+
+                    var start = new Vector2(
+                        xStart + prereq.X * 80 - scrollX + 32,
+                        yStart + prereq.Y * 80 - scrollY + 64
+                    );
+                    var end = new Vector2(
+                        xStart + focus.X * 80 - scrollX + 32,
+                        yStart + focus.Y * 80 - scrollY
+                    );
+                    DrawLineEx(start, end, 2, Raylib_cs.Color.Red);
                 }
             }
 
-            // Draw focus icons
-            for (int i = focuses.Count - 1; i >= 0; i--)
+            // DRAW FOCUS
+            for (var i = focuses.Count - 1; i >= 0; i--)
             {
                 var focus = focuses[i];
-                int fx = xStart + focus.X * 80;
-                int fy = yStart + focus.Y * 80;
+                var fx = xStart + focus.X * 80 - scrollX;
+                var fy = yStart + focus.Y * 80 - scrollY;
 
-                Raylib_cs.Rectangle rect = new Raylib_cs.Rectangle(fx, fy, 64, 64);
+                var rect = new Raylib_cs.Rectangle(fx, fy, 64, 64);
                 DrawRectangleRec(rect, Raylib_cs.Color.SkyBlue);
 
-                if (!string.IsNullOrWhiteSpace(focus.Icon) && loadedIcons.ContainsKey(focus.Icon))
+                if (!string.IsNullOrWhiteSpace(focus.Icon) && loadedIcons.TryGetValue(focus.Icon, out var icon))
                 {
-                    DrawTexture(loadedIcons[focus.Icon], fx, fy, Raylib_cs.Color.White);
+                    DrawTexture(icon, (int)fx, (int)fy, Raylib_cs.Color.White);
                 }
 
-                bool hovered = CheckCollisionPointRec(mouse, rect);
+                var hovered = CheckCollisionPointRec(mouse, rect);
                 if (hovered)
                 {
                     DrawRectangleLinesEx(rect, 3, Raylib_cs.Color.Red);
@@ -154,8 +157,8 @@ namespace H4NationalFocusGUI.services
                     }
                 }
 
-                DrawRectangleLines(fx, fy, 64, 64, Raylib_cs.Color.Black);
-                DrawText(focus.Id, fx + 5, fy + 48, 12, Raylib_cs.Color.White);
+                DrawRectangleLines((int)fx, (int)fy, 64, 64, Raylib_cs.Color.Black);
+                DrawText(focus.Id, (int)fx + 5, (int)fy + 48, 12, Raylib_cs.Color.White);
             }
         }
 
@@ -174,11 +177,9 @@ namespace H4NationalFocusGUI.services
             DrawRectangleRec(noBtn, Raylib_cs.Color.Red);
             DrawText("No", (int)noBtn.X + 15, (int)noBtn.Y + 8, 16, Raylib_cs.Color.White);
 
-            if (IsMouseButtonPressed(MouseButton.Left))
-            {
-                if (CheckCollisionPointRec(mouse, yesBtn)) return true;
-                if (CheckCollisionPointRec(mouse, noBtn)) return false;
-            }
+            if (!IsMouseButtonPressed(MouseButton.Left)) return null;
+            if (CheckCollisionPointRec(mouse, yesBtn)) return true;
+            if (CheckCollisionPointRec(mouse, noBtn)) return false;
 
             return null;
         }

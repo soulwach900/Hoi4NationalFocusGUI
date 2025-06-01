@@ -5,44 +5,49 @@ namespace H4NationalFocusGUI.services
     public class FocusSaveService
     {
         public (bool Success, string Message) TryAddFocus(
-            string id, string name, string desc,
-            string x, string y, string cost, string icon,
-            List<string> selectedPrerequisites,
-            List<Focus> focuses)
+        string id, string name, string desc,
+        string x, string y, string cost, string iconPath,
+        List<string> selectedPrerequisites,
+        List<Focus> focuses)
         {
             if (string.IsNullOrWhiteSpace(id))
+            {
                 return (false, "Focus ID is required.");
+            }
 
             id = id.Replace(" ", "_").ToLower();
 
-            if (!int.TryParse(x, out int xVal) ||
-                !int.TryParse(y, out int yVal) ||
-                !int.TryParse(cost, out int costVal))
+            if (!int.TryParse(x, out var xVal) ||
+                !int.TryParse(y, out var yVal) ||
+                !int.TryParse(cost, out var costVal))
             {
                 return (false, "Invalid numeric values for X, Y, or cost.");
             }
+            
+            var iconId = "GFX_goal_" + id;
 
-            var focus = new Focus(id, icon, name, desc, xVal, yVal, costVal);
+            var focus = new Focus(id, iconId, name, desc, xVal, yVal, costVal, iconPath)
+            {
+                IconPath = iconPath
+            };
             focus.Prerequisites.AddRange(selectedPrerequisites);
             focuses.Add(focus);
 
             return (true, "Focus saved successfully.");
         }
 
-        public (bool Success, string Message) SaveFocusYaml(List<Focus> focuses)
+        public void SaveFocusYaml(List<Focus> focuses)
         {
-            if (focuses.Count == 0)
-                return (false, "No focus created to save.");
+            if (focuses.Count == 0) return;
 
             try
             {
                 string fullPath = Path.Combine("mod/common/national_focus", $"focus_{focuses[0].Id}_tree.txt");
                 focuses[0].GenerateFocusTreeFile(focuses, fullPath);
-                return (true, "File saved to desktop.");
             }
             catch (Exception ex)
             {
-                return (false, $"Error saving file: {ex.Message}");
+                Console.WriteLine("Error: "  + ex.Message);
             }
         }
     }

@@ -8,92 +8,60 @@ using H4NationalFocusGUI.enums;
 
 namespace H4NationalFocusGUI.functional
 {
-    public class Gui
+    public class Gui(List<Focus>? existingFocuses = null)
     {
-        Vector2 mouse;
-        Vector2 screen;
-        private List<Focus> focuses = new();
-        private string idInput, iconInput, nameInput, descInput, countryNameInput, createCountryInput, costInput, xInput, yInput;
-        private string statusMessage;
-        private float statusTimer;
-        private bool showCreateFocusMenu = false;
-        private bool showSetPrerequsites = false;
+        private Vector2 mouse = GetMousePosition();
+        private readonly Vector2 screen = new(GetScreenWidth(), GetScreenHeight());
+        private List<Focus> focuses = existingFocuses ?? [];
+        private string idInput = "", iconInput = "", nameInput = "", descInput = "", countryNameInput = "", createCountryInput = "",
+            costInput = "10", xInput = "0", yInput = "0";
+        
+        private string statusMessage = "";
+        private float statusTimer = 2.5f;
+        private bool showCreateFocusMenu;
+        private bool showSetPrerequsites;
         private ActiveTextField activeField = ActiveTextField.None;
-        private Typings typings = Typings.None;
-        private bool IsTypingActive(Typings typing) => typings == typing;
-        private Dictionary<string, Texture2D> loadedIcons;
-        private Focus? pendingDeleteFocus = null;
-        private GuiLayout layout;
-        private GuiService guiService;
-        private FocusPrerequisitesService focusPrerequisites;
-        private FocusRendererService focusRenderer;
-        private LocalisationService localisation;
-        private GoalsService goalsService;
-        private TexconvWrapper texconvWrapper;
-        private FocusSaveService focusSave;
-        private FocusLoadService focusLoadService;
-
-        public Gui(List<Focus>? existingFocuses = null)
-        {
-            mouse = GetMousePosition();
-            screen = new Vector2(GetScreenWidth(), GetScreenHeight());
-            focuses = existingFocuses ?? new List<Focus>();
-
-            createCountryInput = "";
-            countryNameInput = "";
-            idInput = "";
-            iconInput = "";
-            nameInput = "";
-            descInput = "";
-            costInput = "10";
-            xInput = "0";
-            yInput = "0";
-
-            statusMessage = "";
-            statusTimer = 2.5f;
-
-            loadedIcons = new Dictionary<string, Texture2D>();
-
-            layout = new GuiLayout();
-            guiService = new GuiService();
-            focusPrerequisites = new FocusPrerequisitesService();
-            focusRenderer = new FocusRendererService();
-            localisation = new LocalisationService();
-            goalsService = new GoalsService();
-            texconvWrapper = new TexconvWrapper();
-            focusSave = new FocusSaveService();
-            focusLoadService = new FocusLoadService();
-        }
+        private readonly Dictionary<string, Texture2D> loadedIcons = new();
+        private Focus? pendingDeleteFocus;
+        private readonly GuiLayout layout = new();
+        private readonly GuiService guiService = new();
+        private readonly FocusPrerequisitesService focusPrerequisites = new();
+        private readonly FocusRendererService focusRenderer = new();
+        private readonly LocalisationService localisation = new();
+        private readonly GoalsService goalsService = new();
+        private readonly FocusSaveService focusSave = new();
+        private readonly FocusLoadService focusLoadService = new();
 
         public void Update()
         {
             mouse = GetMousePosition();
+
             guiService.Update();
+            guiService.UpdateContentSize(focuses);
+            
+            if (!showCreateFocusMenu) return;
 
-            if (showCreateFocusMenu)
+            if (IsMouseButtonPressed(MouseButton.Left))
             {
-                if (IsMouseButtonPressed(MouseButton.Left))
-                {
-                    if (CheckCollisionPointRec(mouse, layout.CreateIdField))
-                        activeField = ActiveTextField.Id;
-                    else if (CheckCollisionPointRec(mouse, layout.CreateNameField))
-                        activeField = ActiveTextField.Name;
-                    else if (CheckCollisionPointRec(mouse, layout.CreateDescField))
-                        activeField = ActiveTextField.Desc;
-                    else if (CheckCollisionPointRec(mouse, layout.CreateCostField))
-                        activeField = ActiveTextField.Cost;
-                    else if (CheckCollisionPointRec(mouse, layout.CreateXField))
-                        activeField = ActiveTextField.X;
-                    else if (CheckCollisionPointRec(mouse, layout.CreateYField))
-                        activeField = ActiveTextField.Y;
-                    else if (CheckCollisionPointRec(mouse, layout.CreateIconField))
-                        activeField = ActiveTextField.Icon;
-                    else
-                        activeField = ActiveTextField.None;
-                }
-
-                CaptureTextInput();
+                if (CheckCollisionPointRec(mouse, layout.CreateIdField))
+                    activeField = ActiveTextField.Id;
+                else if (CheckCollisionPointRec(mouse, layout.CreateNameField))
+                    activeField = ActiveTextField.Name;
+                else if (CheckCollisionPointRec(mouse, layout.CreateDescField))
+                    activeField = ActiveTextField.Desc;
+                else if (CheckCollisionPointRec(mouse, layout.CreateCostField))
+                    activeField = ActiveTextField.Cost;
+                else if (CheckCollisionPointRec(mouse, layout.CreateXField))
+                    activeField = ActiveTextField.X;
+                else if (CheckCollisionPointRec(mouse, layout.CreateYField))
+                    activeField = ActiveTextField.Y;
+                else if (CheckCollisionPointRec(mouse, layout.CreateIconField))
+                    activeField = ActiveTextField.Icon;
+                else
+                    activeField = ActiveTextField.None;
             }
+
+            CaptureTextInput();
         }
 
         private void CaptureTextInput()
@@ -129,21 +97,39 @@ namespace H4NationalFocusGUI.functional
 
         public void Render()
         {
-            Vector2 mouse = GetMousePosition();
+            var scrollX = guiService.ScrollX;
+            var scrollY = guiService.ScrollY;
 
+            focusRenderer.RenderFocuses(focuses, mouse, loadedIcons, ref pendingDeleteFocus, ref layout.PendingRect, scrollX, scrollY);
+            
             DrawRectangle(0, 0, 320, 720, Raylib_cs.Color.DarkGray);
-
-            // RENDER FOCUSES FIRST
-            focusRenderer.RenderFocuses(focuses, mouse, loadedIcons, ref pendingDeleteFocus, ref layout.PendingRect);
-
-            focusRenderer.DrawField(layout.CreateFocusField, IsTypingActive(Typings.TypingCreateFocus), "Create Focus");
+            
+            guiService.DrawScrollbars();
+            
+            foreach (var focus in focuses)
+            {
+                if (!string.IsNullOrEmpty(focus.IconPath) && !loadedIcons.ContainsKey(focus.Id))
+                {
+                    try
+                    {
+                        loadedIcons[focus.Id] = LoadTexture(focus.IconPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to Load {focus.IconPath}: {ex.Message}");
+                    }
+                }
+            }
+            focusRenderer.DrawField(layout.CreateFocusField, activeField == ActiveTextField.TypingCreateFocus, "Create Focus");
 
             guiService.ToggleOnClick(mouse, layout.CreateFocusField, ref showCreateFocusMenu);
             if (showCreateFocusMenu)
-                DrawCreateFocusMenu(mouse);
+            {
+                DrawCreateFocusMenu();
+            }
 
-            focusRenderer.DrawField(layout.SaveYamlButton, IsTypingActive(Typings.TypingSaveYaml), "Save Yaml", Raylib_cs.Color.Lime);
-            focusRenderer.DrawField(layout.LoadFocusButton, IsTypingActive(Typings.TypingLoadFocus), "Load Focus", Raylib_cs.Color.Lime);
+            focusRenderer.DrawField(layout.SaveYamlButton, activeField == ActiveTextField.TypingSaveYaml, "Save Yaml", Raylib_cs.Color.Lime);
+            focusRenderer.DrawField(layout.LoadFocusButton, activeField == ActiveTextField.TypingLoadFocus, "Load Focus", Raylib_cs.Color.Lime);
 
             // SAVE YAML
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.SaveYamlButton))
@@ -152,7 +138,7 @@ namespace H4NationalFocusGUI.functional
                 localisation.CreateLocalisation(focuses, countryNameInput);
                 goalsService.CreateGoalsGfx(focuses, countryNameInput);
 
-                guiService.Show("Yaml Saved");
+                guiService.Draw("Yaml Saved");
             }
 
             // LOAD Focus
@@ -162,12 +148,11 @@ namespace H4NationalFocusGUI.functional
 
                 if (loadedFocuses != null)
                 {
+                    focuses.Clear(); // CLEAN THE LAST
                     focuses = loadedFocuses;
-                    guiService.Show("Focus Loaded");
+                    guiService.Draw("Focus Loaded");
                 }
             }
-
-            guiService.Draw();
 
             DrawDeleteFocus();
         }
@@ -191,7 +176,7 @@ namespace H4NationalFocusGUI.functional
             }
         }
 
-        private void DrawCreatePrerequisitesMenu(Vector2 mouse)
+        private void DrawCreatePrerequisitesMenu()
         {
             DrawRectangleRec(layout.CreateMenuPanelPrerequisites, Raylib_cs.Color.DarkGray);
 
@@ -200,42 +185,35 @@ namespace H4NationalFocusGUI.functional
             focusPrerequisites.RenderPrerequisites(focuses, mouse, prerequisitesStart);
         }
 
-        private void DrawCreateFocusMenu(Vector2 mouse)
+        private void DrawCreateFocusMenu()
         {
             DrawRectangleRec(layout.CreateMenuPanel, Raylib_cs.Color.DarkGray);
 
-            focusRenderer.DrawField(layout.CreateIdField, IsTypingActive(Typings.TypingId), $"ID: {idInput}");
-            focusRenderer.DrawField(layout.CreateNameField, IsTypingActive(Typings.TypingName), $"Name: {nameInput}");
-            focusRenderer.DrawField(layout.CreateDescField, IsTypingActive(Typings.TypingDesc), $"Desc: {descInput}");
-            focusRenderer.DrawField(layout.CreateCostField, IsTypingActive(Typings.TypingCost), $"Cost: {costInput}");
-            focusRenderer.DrawField(layout.CreateXField, IsTypingActive(Typings.TypingX), $"X: {xInput}");
-            focusRenderer.DrawField(layout.CreateYField, IsTypingActive(Typings.TypingY), $"Y: {yInput}");
+            focusRenderer.DrawField(layout.CreateIdField, activeField == ActiveTextField.TypingId, $"ID: {idInput}");
+            focusRenderer.DrawField(layout.CreateNameField, activeField == ActiveTextField.TypingName, $"Name: {nameInput}");
+            focusRenderer.DrawField(layout.CreateDescField, activeField == ActiveTextField.TypingDesc, $"Desc: {descInput}");
+            focusRenderer.DrawField(layout.CreateCostField, activeField == ActiveTextField.TypingCost, $"Cost: {costInput}");
+            focusRenderer.DrawField(layout.CreateXField, activeField == ActiveTextField.TypingX, $"X: {xInput}");
+            focusRenderer.DrawField(layout.CreateYField, activeField == ActiveTextField.TypingY, $"Y: {yInput}");
             focusRenderer.DrawField(layout.CreateIconField, false, $"Icon: {Path.GetFileName(iconInput)}");
 
-            focusRenderer.DrawField(layout.CreateSaveButton, IsTypingActive(Typings.TypingSaveFocus), "Save", Raylib_cs.Color.Lime);
+            focusRenderer.DrawField(layout.CreateSaveButton, activeField == ActiveTextField.TypingSaveFocus, "Save", Raylib_cs.Color.Lime);
 
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.CreateIconField))
             {
                 focusRenderer.WindowsExplorerOpen(mouse, layout.CreateIconField, ref iconInput, loadedIcons, ref statusMessage, ref statusTimer);
-                TexconvWrapper.ConvertPngToDds("thirdparty/texconv/texconv.exe", iconInput, "mod/gfx/interface/goals", idInput.Replace(" ", "_").ToLower());
-            }
-
-            if (loadedIcons.TryGetValue(iconInput, out Texture2D previewIcon))
-            {
-                DrawTextureEx(previewIcon, new Vector2(layout.CreateIconField.X + 160, layout.CreateIconField.Y + 35), 0, 1.5f, Raylib_cs.Color.White);
+                TexconvWrapper.ConvertPngToDds("thirdparty/texconv/texconv.exe", iconInput,
+                    "mod/gfx/interface/goals", idInput.Replace(" ", "_").ToLower());
             }
 
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.CreateSaveButton))
             {
                 string id = idInput.Replace(" ", "_").ToLower();
-                iconInput = $"mod/gfx/interface/goals/{id}.dds";
-                string iconName = Path.GetFileNameWithoutExtension(iconInput);
-                string iconReference = $"GFX_goal_{iconName}";
 
-                var (success, message) = focusSave.TryAddFocus(id, nameInput, descInput, xInput, yInput, costInput, iconReference,
+                var (success, message) = focusSave.TryAddFocus(id, nameInput, descInput, xInput, yInput, costInput, iconInput,
                  focusPrerequisites.selectedPrerequisites, focuses);
 
-                guiService.Show(message);
+                guiService.Draw(message);
 
                 if (success)
                 {
@@ -244,11 +222,13 @@ namespace H4NationalFocusGUI.functional
             }
 
             // PREREQUISITES
-            focusRenderer.DrawField(layout.CreatePrereqFocusField, IsTypingActive(Typings.TypingCreateFocus), $"Set Prerequisites");
+            focusRenderer.DrawField(layout.CreatePrereqFocusField, activeField == ActiveTextField.TypingCreateFocus, $"Set Prerequisites");
 
             guiService.ToggleOnClick(mouse, layout.CreatePrereqFocusField, ref showSetPrerequsites);
             if (showSetPrerequsites)
-                DrawCreatePrerequisitesMenu(mouse);
+            {
+                DrawCreatePrerequisitesMenu();
+            }
         }
     }
 }

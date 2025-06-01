@@ -1,8 +1,8 @@
 namespace H4NationalFocusGUI.functional
 {
-    public class FolderStructury
+    public static class FolderStructure
     {
-        public void CreateStructury()
+        public static void CreateStructure()
         {
             if (!Directory.Exists("mod"))
             {
@@ -20,8 +20,8 @@ namespace H4NationalFocusGUI.functional
             }
             else
             {
-                Console.WriteLine("mod folder not Existe!");
-                Console.WriteLine("Creating mod Structury");
+                Console.WriteLine("mod folder not Exist!");
+                Console.WriteLine("Creating mod Structure");
             }
         }
     }
