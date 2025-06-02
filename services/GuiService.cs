@@ -1,25 +1,24 @@
+using static Raylib_cs.Raylib;
 using System.Numerics;
 using H4NationalFocusGUI.components;
 using Raylib_cs;
-using static Raylib_cs.Raylib;
 using Color = Raylib_cs.Color;
 
 namespace H4NationalFocusGUI.services
 {
     public class GuiService
     {
-        private GuiLayout layout = new();
-
-        private readonly string message;
+        private readonly GuiLayout layout = new();
+        
         private float timer;
 
         // VERTICAL
         private float scrollY;
         private float contentHeight = 1280f;
         private readonly float viewHeight = 720f;
-        private float scrollbarHeight => viewHeight;
-        private float thumbHeight => MathF.Max(30f, (viewHeight / contentHeight) * scrollbarHeight);
-        private float thumbY => (scrollY / Math.Max(1, contentHeight - viewHeight)) * (scrollbarHeight - thumbHeight);
+        private float ScrollbarHeight => viewHeight;
+        private float ThumbHeight => MathF.Max(30f, (viewHeight / contentHeight) * ScrollbarHeight);
+        private float ThumbY => (scrollY / Math.Max(1, contentHeight - viewHeight)) * (ScrollbarHeight - ThumbHeight);
         private bool draggingScroll;
         private float dragOffsetY;
 
@@ -27,12 +26,12 @@ namespace H4NationalFocusGUI.services
         private float scrollX;
         private float contentWidth = 3000f;
         private readonly float viewWidth = 1280f;
-        private float scrollbarWidth => viewWidth;
-        private float thumbWidth => MathF.Max(30f, (viewWidth / contentWidth) * scrollbarWidth);
-        private float thumbX => (scrollX / Math.Max(1, contentWidth - viewWidth)) * (scrollbarWidth - thumbWidth);
+        private float ScrollbarWidth => viewWidth;
+        private float ThumbWidth => MathF.Max(30f, (viewWidth / contentWidth) * ScrollbarWidth);
+        private float ThumbX => (scrollX / Math.Max(1, contentWidth - viewWidth)) * (ScrollbarWidth - ThumbWidth);
         private bool draggingScrollH;
         private float dragOffsetX;
-        
+
         public void Update()
         {
             if (timer > 0)
@@ -58,7 +57,7 @@ namespace H4NationalFocusGUI.services
             DrawText(message, posX, posY, fontSize, Color.DarkGreen);
         }
 
-        public void ToggleOnClick(Vector2 mouse, Raylib_cs.Rectangle rect, ref bool flag)
+        public void ToggleOnClick(Vector2 mouse, Rectangle rect, ref bool flag)
         {
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, rect))
                 flag = !flag;
@@ -69,11 +68,11 @@ namespace H4NationalFocusGUI.services
             var mouse = GetMousePosition();
 
             // VERTICAL
-            var thumbRectV = new Raylib_cs.Rectangle(
+            var thumbRectV = new Rectangle(
                 layout.FocusDisplayScrollVertical.X,
-                layout.FocusDisplayScrollVertical.Y + thumbY,
+                layout.FocusDisplayScrollVertical.Y + ThumbY,
                 15,
-                thumbHeight
+                ThumbHeight
             );
 
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, thumbRectV))
@@ -89,8 +88,8 @@ namespace H4NationalFocusGUI.services
             if (draggingScroll)
             {
                 float newThumbY = mouse.Y - dragOffsetY - layout.FocusDisplayScrollVertical.Y;
-                newThumbY = Math.Clamp(newThumbY, 0, scrollbarHeight - thumbHeight);
-                scrollY = (newThumbY / Math.Max(1, scrollbarHeight - thumbHeight)) *
+                newThumbY = Math.Clamp(newThumbY, 0, ScrollbarHeight - ThumbHeight);
+                scrollY = (newThumbY / Math.Max(1, ScrollbarHeight - ThumbHeight)) *
                           Math.Max(0, contentHeight - viewHeight);
             }
             
@@ -98,10 +97,10 @@ namespace H4NationalFocusGUI.services
             scrollY = Math.Clamp(scrollY, 0, Math.Max(0, contentHeight - viewHeight));
 
             // HORIZONTAL
-            var thumbRectH = new Raylib_cs.Rectangle(
-                layout.FocusDisplayScrollHorizontal.X + thumbX,
+            var thumbRectH = new Rectangle(
+                layout.FocusDisplayScrollHorizontal.X + ThumbX,
                 layout.FocusDisplayScrollHorizontal.Y,
-                thumbWidth,
+                ThumbWidth,
                 15
             );
 
@@ -118,8 +117,8 @@ namespace H4NationalFocusGUI.services
             if (draggingScrollH)
             {
                 float newThumbX = mouse.X - dragOffsetX - layout.FocusDisplayScrollHorizontal.X;
-                newThumbX = Math.Clamp(newThumbX, 0, scrollbarWidth - thumbWidth);
-                scrollX = (newThumbX / Math.Max(1, scrollbarWidth - thumbWidth)) *
+                newThumbX = Math.Clamp(newThumbX, 0, ScrollbarWidth - ThumbWidth);
+                scrollX = (newThumbX / Math.Max(1, ScrollbarWidth - ThumbWidth)) *
                           Math.Max(0, contentWidth - viewWidth);
             }
 
@@ -158,28 +157,28 @@ namespace H4NationalFocusGUI.services
                 (int)layout.FocusDisplayScrollVertical.X,
                 (int)layout.FocusDisplayScrollVertical.Y,
                 15,
-                (int)scrollbarHeight,
+                (int)ScrollbarHeight,
                 Color.Gray);
 
             DrawRectangle(
                 (int)layout.FocusDisplayScrollVertical.X,
-                (int)(layout.FocusDisplayScrollVertical.Y + thumbY),
+                (int)(layout.FocusDisplayScrollVertical.Y + ThumbY),
                 15,
-                (int)thumbHeight,
+                (int)ThumbHeight,
                 Color.DarkGray);
 
             // HORIZONTAL
             DrawRectangle(
                 (int)layout.FocusDisplayScrollHorizontal.X,
                 (int)layout.FocusDisplayScrollHorizontal.Y,
-                (int)scrollbarWidth,
+                (int)ScrollbarWidth,
                 15,
                 Color.Gray);
 
             DrawRectangle(
-                (int)(layout.FocusDisplayScrollHorizontal.X + thumbX),
+                (int)(layout.FocusDisplayScrollHorizontal.X + ThumbX),
                 (int)layout.FocusDisplayScrollHorizontal.Y,
-                (int)thumbWidth,
+                (int)ThumbWidth,
                 15,
                 Color.DarkGray);
         }

@@ -1,5 +1,6 @@
-using Rectangle = Raylib_cs.Rectangle;
 using static Raylib_cs.Raylib;
+
+using Rectangle = Raylib_cs.Rectangle;
 using System.Numerics;
 using H4NationalFocusGUI.components;
 
@@ -7,7 +8,7 @@ namespace H4NationalFocusGUI.services
 {
     public class FocusPrerequisitesService
     {
-        public readonly List<string> selectedPrerequisites = [];
+        public readonly List<string> SelectedPrerequisites = [];
 
         public void RenderPrerequisites(List<Focus> focuses, Vector2 mouse, Vector2 startPos)
         {
@@ -18,7 +19,7 @@ namespace H4NationalFocusGUI.services
             foreach (var focus in focuses)
             {
                 var box = new Rectangle(startPos.X, y, 20, 20);
-                var selected = selectedPrerequisites.Contains(focus.Id);
+                var selected = SelectedPrerequisites.Contains(focus.Id);
 
                 DrawRectangleRec(box, selected ? Raylib_cs.Color.Green : Raylib_cs.Color.White);
                 DrawRectangleLinesEx(box, 1, Raylib_cs.Color.Black);
@@ -27,9 +28,9 @@ namespace H4NationalFocusGUI.services
                 if (IsMouseButtonPressed(Raylib_cs.MouseButton.Left) && CheckCollisionPointRec(mouse, box))
                 {
                     if (selected)
-                        selectedPrerequisites.Remove(focus.Id);
+                        SelectedPrerequisites.Remove(focus.Id);
                     else
-                        selectedPrerequisites.Add(focus.Id);
+                        SelectedPrerequisites.Add(focus.Id);
                 }
 
                 y += 30;

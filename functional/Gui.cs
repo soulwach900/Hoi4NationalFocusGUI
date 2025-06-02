@@ -1,6 +1,5 @@
-﻿using Rectangle = Raylib_cs.Rectangle;
+﻿using static Raylib_cs.Raylib;
 using H4NationalFocusGUI.components;
-using static Raylib_cs.Raylib;
 using H4NationalFocusGUI.services;
 using System.Numerics;
 using Raylib_cs;
@@ -28,7 +27,6 @@ namespace H4NationalFocusGUI.functional
         private readonly FocusPrerequisitesService focusPrerequisites = new();
         private readonly FocusRendererService focusRenderer = new();
         private readonly LocalisationService localisation = new();
-        private readonly GoalsService goalsService = new();
         private readonly FocusSaveService focusSave = new();
         private readonly FocusLoadService focusLoadService = new();
 
@@ -102,25 +100,23 @@ namespace H4NationalFocusGUI.functional
 
             focusRenderer.RenderFocuses(focuses, mouse, loadedIcons, ref pendingDeleteFocus, ref layout.PendingRect, scrollX, scrollY);
             
-            DrawRectangle(0, 0, 320, 720, Raylib_cs.Color.DarkGray);
+            DrawRectangle(0, 0, 320, 720, Color.DarkGray);
             
             guiService.DrawScrollbars();
             
-            foreach (var focus in focuses)
+            foreach (var focus in focuses.Where(focus => !string.IsNullOrEmpty(focus.IconId) && !loadedIcons.ContainsKey(focus.Id)))
             {
-                if (!string.IsNullOrEmpty(focus.IconPath) && !loadedIcons.ContainsKey(focus.Id))
+                try
                 {
-                    try
-                    {
-                        loadedIcons[focus.Id] = LoadTexture(focus.IconPath);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Failed to Load {focus.IconPath}: {ex.Message}");
-                    }
+                    loadedIcons[focus.Id] = LoadTexture(focus.IconId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to Load {focus.IconId}: {ex.Message}");
                 }
             }
-            focusRenderer.DrawField(layout.CreateFocusField, activeField == ActiveTextField.TypingCreateFocus, "Create Focus");
+            
+            FocusRendererService.DrawField(layout.CreateFocusField, activeField == ActiveTextField.TypingCreateFocus, "Create Focus");
 
             guiService.ToggleOnClick(mouse, layout.CreateFocusField, ref showCreateFocusMenu);
             if (showCreateFocusMenu)
@@ -128,15 +124,15 @@ namespace H4NationalFocusGUI.functional
                 DrawCreateFocusMenu();
             }
 
-            focusRenderer.DrawField(layout.SaveYamlButton, activeField == ActiveTextField.TypingSaveYaml, "Save Yaml", Raylib_cs.Color.Lime);
-            focusRenderer.DrawField(layout.LoadFocusButton, activeField == ActiveTextField.TypingLoadFocus, "Load Focus", Raylib_cs.Color.Lime);
+            FocusRendererService.DrawField(layout.SaveYamlButton, activeField == ActiveTextField.TypingSaveYaml, "Save Yaml", Color.Lime);
+            FocusRendererService.DrawField(layout.LoadFocusButton, activeField == ActiveTextField.TypingLoadFocus, "Load Focus", Color.Lime);
 
             // SAVE YAML
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.SaveYamlButton))
             {
-                focusSave.SaveFocusYaml(focuses);
+                focusSave.SaveFocus(focuses);
                 localisation.CreateLocalisation(focuses, countryNameInput);
-                goalsService.CreateGoalsGfx(focuses, countryNameInput);
+                GoalsService.CreateGoalsGfx(focuses, idInput);
 
                 guiService.Draw("Yaml Saved");
             }
@@ -144,7 +140,7 @@ namespace H4NationalFocusGUI.functional
             // LOAD Focus
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.LoadFocusButton))
             {
-                var loadedFocuses = focusLoadService.WindowsExplorerOpen(mouse, layout.LoadFocusButton, ref statusMessage, ref statusTimer);
+                var loadedFocuses = focusLoadService.ExplorerOpen(ref statusMessage, ref statusTimer);
 
                 if (loadedFocuses != null)
                 {
@@ -159,26 +155,26 @@ namespace H4NationalFocusGUI.functional
 
         private void DrawDeleteFocus()
         {
-            if (pendingDeleteFocus != null)
-            {
-                Rectangle box = new((screen.X - screen.X * 0.9f) / 2, (screen.Y - screen.Y * 0.9f) / 2, screen.X * 0.9f, screen.Y * 0.9f);
+            if (pendingDeleteFocus == null) return;
+            
+            Rectangle box = new((screen.X - screen.X * 0.9f) / 2, (screen.Y - screen.Y * 0.9f) / 2, screen.X * 0.9f, screen.Y * 0.9f);
 
-                var result = focusRenderer.Show(box, mouse, "Delete focus ?");
-                if (result == true)
-                {
+            var result = focusRenderer.Show(box, mouse, "Delete focus ?");
+            switch (result)
+            {
+                case true:
                     focuses.Remove(pendingDeleteFocus);
                     pendingDeleteFocus = null;
-                }
-                else if (result == false)
-                {
+                    break;
+                case false:
                     pendingDeleteFocus = null;
-                }
+                    break;
             }
         }
 
         private void DrawCreatePrerequisitesMenu()
         {
-            DrawRectangleRec(layout.CreateMenuPanelPrerequisites, Raylib_cs.Color.DarkGray);
+            DrawRectangleRec(layout.CreateMenuPanelPrerequisites, Color.DarkGray);
 
             Vector2 prerequisitesStart = new(layout.CreateMenuPanelPrerequisites.X + 10, layout.CreateMenuPanelPrerequisites.Y + 40);
 
@@ -187,42 +183,53 @@ namespace H4NationalFocusGUI.functional
 
         private void DrawCreateFocusMenu()
         {
-            DrawRectangleRec(layout.CreateMenuPanel, Raylib_cs.Color.DarkGray);
+            DrawRectangleRec(layout.CreateMenuPanel, Color.DarkGray);
 
-            focusRenderer.DrawField(layout.CreateIdField, activeField == ActiveTextField.TypingId, $"ID: {idInput}");
-            focusRenderer.DrawField(layout.CreateNameField, activeField == ActiveTextField.TypingName, $"Name: {nameInput}");
-            focusRenderer.DrawField(layout.CreateDescField, activeField == ActiveTextField.TypingDesc, $"Desc: {descInput}");
-            focusRenderer.DrawField(layout.CreateCostField, activeField == ActiveTextField.TypingCost, $"Cost: {costInput}");
-            focusRenderer.DrawField(layout.CreateXField, activeField == ActiveTextField.TypingX, $"X: {xInput}");
-            focusRenderer.DrawField(layout.CreateYField, activeField == ActiveTextField.TypingY, $"Y: {yInput}");
-            focusRenderer.DrawField(layout.CreateIconField, false, $"Icon: {Path.GetFileName(iconInput)}");
+            FocusRendererService.DrawField(layout.CreateIdField, activeField == ActiveTextField.TypingId, $"ID: {idInput}");
+            FocusRendererService.DrawField(layout.CreateNameField, activeField == ActiveTextField.TypingName, $"Name: {nameInput}");
+            FocusRendererService.DrawField(layout.CreateDescField, activeField == ActiveTextField.TypingDesc, $"Desc: {descInput}");
+            FocusRendererService.DrawField(layout.CreateCostField, activeField == ActiveTextField.TypingCost, $"Cost: {costInput}");
+            FocusRendererService.DrawField(layout.CreateXField, activeField == ActiveTextField.TypingX, $"X: {xInput}");
+            FocusRendererService.DrawField(layout.CreateYField, activeField == ActiveTextField.TypingY, $"Y: {yInput}");
+            FocusRendererService.DrawField(layout.CreateIconField, false, $"Icon: {Path.GetFileName(iconInput)}");
 
-            focusRenderer.DrawField(layout.CreateSaveButton, activeField == ActiveTextField.TypingSaveFocus, "Save", Raylib_cs.Color.Lime);
+            FocusRendererService.DrawField(layout.CreateSaveButton, activeField == ActiveTextField.TypingSaveFocus, "Save", Color.Lime);
 
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.CreateIconField))
             {
-                focusRenderer.WindowsExplorerOpen(mouse, layout.CreateIconField, ref iconInput, loadedIcons, ref statusMessage, ref statusTimer);
-                TexconvWrapper.ConvertPngToDds("thirdparty/texconv/texconv.exe", iconInput,
-                    "mod/gfx/interface/goals", idInput.Replace(" ", "_").ToLower());
+                focusRenderer.ExplorerOpen(ref iconInput, loadedIcons, ref statusMessage, ref statusTimer);
             }
 
             if (IsMouseButtonPressed(MouseButton.Left) && CheckCollisionPointRec(mouse, layout.CreateSaveButton))
             {
-                string id = idInput.Replace(" ", "_").ToLower();
+                var id = idInput.Replace(" ", "_").ToLower();
 
-                var (success, message) = focusSave.TryAddFocus(id, nameInput, descInput, xInput, yInput, costInput, iconInput,
-                 focusPrerequisites.selectedPrerequisites, focuses);
+                var iconFilePath = iconInput;
+
+                var (success, message) = focusSave.TryAddFocus(
+                    id,
+                    nameInput,
+                    descInput,
+                    xInput,
+                    yInput,
+                    costInput,
+                    iconFilePath,
+                    focusPrerequisites.SelectedPrerequisites,
+                    focuses
+                );
 
                 guiService.Draw(message);
 
                 if (success)
-                {
+                {   
                     showCreateFocusMenu = false;
+                    iconInput = "";
+                    focusPrerequisites.SelectedPrerequisites.Clear();
                 }
             }
 
             // PREREQUISITES
-            focusRenderer.DrawField(layout.CreatePrereqFocusField, activeField == ActiveTextField.TypingCreateFocus, $"Set Prerequisites");
+            FocusRendererService.DrawField(layout.CreatePrereqFocusField, activeField == ActiveTextField.TypingCreateFocus, $"Set Prerequisites");
 
             guiService.ToggleOnClick(mouse, layout.CreatePrereqFocusField, ref showSetPrerequsites);
             if (showSetPrerequsites)

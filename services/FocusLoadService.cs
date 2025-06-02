@@ -1,60 +1,34 @@
-using System.Numerics;
 using H4NationalFocusGUI.components;
-using static Raylib_cs.Raylib;
 
 namespace H4NationalFocusGUI.services
 {
     public class FocusLoadService
     {
-        public List<Focus>? WindowsExplorerOpen(
-            Vector2 mouse,
-            Raylib_cs.Rectangle loadFocusField,
-            ref string statusMessage,
-            ref float statusTimer)
+        public List<Focus>? ExplorerOpen(ref string statusMessage, ref float statusTimer)
         {
-            if (!CheckCollisionPointRec(mouse, loadFocusField))
-                return null;
-
-            string? selectedPath = null;
-
-            Thread thread = new(() =>
+            string? selectedPath = ExplorerService.FileSelector(
+                "Choose National Focus",
+                "National Focus Files (*.txt)",
+                ["txt"]
+            );
+            
+            if (string.IsNullOrEmpty(selectedPath)) return null;
+            
+            try
             {
-                OpenFileDialog ofd = new()
-                {
-                    Filter = "TEXT Files (*.txt)|*.txt",
-                    Title = "Choose National Focus"
-                };
+                var focuses = LoadFocusTreeFile(selectedPath);
 
-                if (ofd.ShowDialog() == DialogResult.OK)
-                {
-                    selectedPath = Path.GetFullPath(ofd.FileName);
-                }
-            });
+                statusMessage = "National Focus loaded successfully!";
+                statusTimer = 3.0f;
 
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
-
-            if (!string.IsNullOrEmpty(selectedPath))
-            {
-                try
-                {
-                    var focuses = LoadFocusTreeFile(selectedPath);
-
-                    statusMessage = "National Focus loaded successfully!";
-                    statusTimer = 3.0f;
-
-                    return focuses;
-                }
-                catch (Exception ex)
-                {
-                    statusMessage = "Error Load National Focus: " + ex.Message;
-                    statusTimer = 3.0f;
-                    return null;
-                }
+                return focuses;
             }
-
-            return null;
+            catch (Exception ex)
+            {
+                statusMessage = "Error Load National Focus: " + ex.Message;
+                statusTimer = 3.0f;
+                return null;
+            }
         }
 
         private static List<Focus> LoadFocusTreeFile(string fileName)
@@ -70,7 +44,7 @@ namespace H4NationalFocusGUI.services
 
                 if (trimmed.Contains("focus = {"))
                 {
-                    currentFocus = new Focus(id: "", icon: "", name: "", description: "", x: 0, y: 0, cost: 10, iconPath: "");
+                    currentFocus = new Focus(id: "", iconId: "", name: "", description: "", x: 0, y: 0, cost: 10);
                     inFocusBlock = true;
                     inPrereqBlock = false;
                     continue;
@@ -88,7 +62,7 @@ namespace H4NationalFocusGUI.services
                 if (trimmed.StartsWith("id = "))
                     currentFocus.Id = trimmed.Substring("id = ".Length).Trim();
                 else if (trimmed.StartsWith("icon = "))
-                    currentFocus.IconPath = trimmed.Substring("icon = ".Length).Trim();
+                    currentFocus.IconId = trimmed.Substring("icon = ".Length).Trim();
                 else if (trimmed.StartsWith("x = ") && int.TryParse(trimmed.Substring("x = ".Length), out var x))
                     currentFocus.X = x;
                 else if (trimmed.StartsWith("y = ") && int.TryParse(trimmed.Substring("y = ".Length), out var y))
@@ -128,6 +102,5 @@ namespace H4NationalFocusGUI.services
 
             return focuses;
         }
-
     }
 }

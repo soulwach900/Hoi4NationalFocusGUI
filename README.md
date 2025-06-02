@@ -7,9 +7,18 @@
 
 A simple program built with Raylib to create national focus trees for the game Hearts of Iron IV.
 
+## Features
+
+- Visually create and manage national focus trees.
+- Edit focus ID, name, description, position, cost, prerequisites, and icons.
+- Save and load focus trees
+- Automatically generate localization and GFX files.
+
 ## Installation From Source
 
-### You Need .NET SDK 9.0 To Build Then
+### Requirements
+
+- [.NET SDK 9.0](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) or higher
 
 1. **Clone the repository:**
 
@@ -32,19 +41,3 @@ A simple program built with Raylib to create national focus trees for the game H
    ```bash
    dotnet run
    ```
-
-## External Dependencies
-
-This project uses [texconv.exe](https://github.com/microsoft/DirectXTex) from the Microsoft DirectXTex library to convert PNG images to DDS format.
-
-### Download texconv.exe
-
-Please download the latest version of `texconv.exe` from the official releases page:
-
-[https://github.com/microsoft/DirectXTex/releases/latest/download/texconv.exe](https://github.com/microsoft/DirectXTex/releases/latest/download/texconv.exe)
-
-After downloading, place the executable in the `thirdparty/texconv` directory in the project.
-
-## Third-Party Licenses
-
-[Microsoft Corporation](thirdparty/texconv/LICENSE.txt)

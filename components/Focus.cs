@@ -1,10 +1,10 @@
 ﻿namespace H4NationalFocusGUI.components
 {
-    public class Focus(string id, string icon, string name, string description, int x, int y, int cost, string iconPath)
+    public class Focus(string id, string iconId, string name, string description, int x, int y, int cost)
     {
         public string Id { get; set; } = id;
-        public string Icon { get; set; } = icon;
-        public string IconPath { get; set; } = iconPath;
+        public string IconId { get; set; } = iconId;
+        public string IconPath { get; set; } = "";
         public string Name { get; set; } = name;
         public string Description { get; set; } = description;
         public int X { get; set; } = x;
@@ -22,7 +22,7 @@
             {
                 writer.WriteLine("\tfocus = {");
                 writer.WriteLine($"\t\tid = {focus.Id}");
-                writer.WriteLine($"\t\ticon = {focus.IconPath}");
+                writer.WriteLine($"\t\ticon = {focus.IconId}");
                 writer.WriteLine($"\t\tx = {focus.X}");
                 writer.WriteLine($"\t\ty = {focus.Y}");
                 writer.WriteLine($"\t\tcost = {focus.Cost}");

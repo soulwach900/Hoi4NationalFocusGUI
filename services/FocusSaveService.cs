@@ -5,15 +5,13 @@ namespace H4NationalFocusGUI.services
     public class FocusSaveService
     {
         public (bool Success, string Message) TryAddFocus(
-        string id, string name, string desc,
-        string x, string y, string cost, string iconPath,
-        List<string> selectedPrerequisites,
-        List<Focus> focuses)
+            string id, string name, string desc,
+            string x, string y, string cost, string iconPath,
+            List<string> selectedPrerequisites,
+            List<Focus> focuses)
         {
             if (string.IsNullOrWhiteSpace(id))
-            {
                 return (false, "Focus ID is required.");
-            }
 
             id = id.Replace(" ", "_").ToLower();
 
@@ -23,20 +21,22 @@ namespace H4NationalFocusGUI.services
             {
                 return (false, "Invalid numeric values for X, Y, or cost.");
             }
-            
+
             var iconId = "GFX_goal_" + id;
 
-            var focus = new Focus(id, iconId, name, desc, xVal, yVal, costVal, iconPath)
+            var focus = new Focus(id, iconId, name, desc, xVal, yVal, costVal)
             {
+                IconId = iconId,
                 IconPath = iconPath
             };
+
             focus.Prerequisites.AddRange(selectedPrerequisites);
             focuses.Add(focus);
 
             return (true, "Focus saved successfully.");
         }
 
-        public void SaveFocusYaml(List<Focus> focuses)
+        public void SaveFocus(List<Focus> focuses)
         {
             if (focuses.Count == 0) return;
 
